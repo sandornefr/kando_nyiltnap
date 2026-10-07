@@ -1,0 +1,44 @@
+name: Publish player and projector pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assemble public files only
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          mkdir public
+          cp index.html app.js style.css config.js public/
+          touch public/.nojekyll
+          python - <<'PY'
+          import os, json
+          from pathlib import Path
+          url=os.environ.get('API_BASE','').rstrip('/')
+          if url:
+              if not url.startswith('https://'): raise SystemExit('API_BASE must be HTTPS')
+              Path('public/config.js').write_text('window.KANDO_CONFIG = '+json.dumps({'apiBase':url})+';\n')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - uses: actions/deploy-pages@v4
+        id: deployment
