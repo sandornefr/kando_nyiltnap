@@ -26,7 +26,7 @@ jobs:
           API_BASE: ${{ vars.API_BASE }}
         run: |
           mkdir public
-          cp index.html app.js style.css config.js public/
+          cp index.html app.js style.css config.js viewport.js public/
           touch public/.nojekyll
           python - <<'PY'
           import os, json

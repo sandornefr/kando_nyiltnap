@@ -295,7 +295,7 @@ def index():
 
 @app.get('/<name>')
 def asset(name):
-    if name not in ('index.html','style.css','app.js','config.js'):
+    if name not in ('index.html','style.css','app.js','config.js','viewport.js'):
         return error('Nincs ilyen oldal.',404)
     return send_from_directory(ROOT,name)
 

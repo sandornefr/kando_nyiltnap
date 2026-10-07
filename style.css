@@ -3,3 +3,18 @@
 @media(max-height:700px) and (max-width:760px){.game{gap:7px;padding:8px 12px}.game .brief{line-height:1.3}.board{max-width:180px}.cell{font-size:21px}.connector{min-height:62px}.program{min-height:49px}.arrows button{min-height:40px;width:44px}.feedback{padding:6px;min-height:30px}.game h1{font-size:23px}.robot-layout{gap:8px}.game-footer button{min-height:42px}.avatar-big{margin:14px auto}.entry{padding:16px}.entry .card{padding:14px}.entry label{margin-top:10px}.entry .submit{margin-top:15px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(min-width:761px) and (max-height:800px){.game{gap:10px;padding:14px 24px}.connector{min-height:66px}.board{max-width:260px}.game h1{font-size:30px}.game .brief{font-size:13px}.feedback{min-height:34px;padding:8px 12px}.mini-tv{height:56px}.program{min-height:95px}}
+/* One complete screen: natural layout is fitted by viewport.js, never clipped. */
+html,body{height:100%;height:var(--visible-height,100dvh);min-height:0;overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column}header{flex-shrink:0}#app{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;justify-content:center;align-items:center}
+#app>section{flex-shrink:0;width:100%;margin:0 auto;min-height:0;transform-origin:center center}
+#app>.entry{padding-top:20px;padding-bottom:20px}#app>.game{height:auto;min-height:0}.game .workspace{flex:none}
+#app>.waiting{padding:14px 18px}.waiting .avatar-big{width:64px;height:64px;font-size:36px;margin:12px auto}.waiting h1{font-size:30px;margin-bottom:12px}.waiting p{margin-bottom:12px}.waiting .result-score{margin:8px;font-size:42px}.waiting .roster{max-height:none;overflow:visible}.waiting .person{padding:8px}
+#app>.projector{height:auto;min-height:0}.host .roster{max-height:none;overflow:visible}
+#teacher-login{max-width:440px;margin:auto}#teacher-login label{display:block;margin:16px 0 8px}#teacher-login input{width:100%;padding:12px;min-height:44px;font-size:16px;border-radius:10px;border:1px solid #627796;background:#08131f;color:white}
+@media(max-width:760px){
+ header{height:48px}.entry>div:first-child{display:none}#app>.entry{padding:10px 16px;gap:0;max-width:450px}.entry .card{padding:16px}.entry h2{font-size:23px;margin-bottom:12px}.entry label{margin:10px 0 6px}.entry input{font-size:16px;min-height:44px;padding:10px}.code-input{font-size:25px!important}.entry .submit{margin-top:14px}.entry .demo-note{margin:10px 0 0;font-size:11px}.avatars{justify-content:space-between;gap:5px}.entry .eyebrow{font-size:10px}
+ .game{gap:8px}.game .workspace{gap:8px}.robot-layout{gap:8px}.board{width:min(52vw,220px)}.robot-controls .program{min-height:48px;padding:6px}.robot-controls .block{width:32px;height:32px}.robot-controls #clear-program{min-height:36px;padding:7px 12px;font-size:12px}.arrows button{min-height:42px}.game-footer{gap:8px}.game-footer .hint{line-height:1.3}.pause-overlay{inset:48px 0 0}.reconnect{top:48px}.keyboard-open .entry .eyebrow,.keyboard-open .entry .demo-note{display:none}
+}
+@media(max-height:500px) and (orientation:landscape){
+ header{height:40px}.game{padding:6px 16px;gap:5px}.game h1{font-size:21px}.game .eyebrow{margin:0}.game .brief{font-size:11px}.game-meta{display:none}.robot-layout,.ticket-layout{grid-template-columns:1fr 1fr;gap:14px}.board{max-width:170px}.connector{min-height:44px;padding:5px}.connector svg{width:27px;height:27px}.cable-column{gap:5px}.mini-tv{display:none}.game .feedback{min-height:26px;padding:4px 8px}.game-footer button{min-height:36px;padding:8px}.device-title{margin-bottom:5px}.waiting .avatar-big{display:none}
+}
