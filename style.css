@@ -282,6 +282,23 @@ button.list-item:hover:not(:disabled) { border-color: var(--purple); background:
 .player-task-nav button { padding: 8px 12px; font-size: 14px; }
 .player-task-nav .selected { border-color: #6c638a; background: #252b45; color: #ded2ff; }
 .player-task-nav > :last-child { margin-left: auto; }
+.task-pager { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.task-pager .button { min-width: 44px; min-height: 44px; }
+.task-position { display: grid; gap: 2px; text-align: center; min-width: 62px; line-height: 1.15; }
+.task-position strong { font-size: 17px; white-space: nowrap; }
+.task-position > span { color: var(--muted); font-size: 14px; }
+.lobby-plan { display: grid; gap: 8px; margin-top: 12px; font-size: 18px; line-height: 1.35; }
+.lobby-plan > strong { font-size: 20px; }
+.lobby-plan > span { color: var(--muted); }
+.lobby-roles { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.lobby-roles b { color: var(--mint); }
+.sample-serif { font-family: Georgia, serif; }
+.sample-button { width: auto; min-width: 94px; height: 40px; padding: 9px 12px; border-radius: 14px; background: var(--mint); color: #10272b; font-size: 15px; font-weight: 750; }
+.sample-button.square { border-radius: 2px; }
+.sample-hero-position { display: flex; align-items: center; gap: 8px; width: 90px; }
+.sample-hero-position i { width: 42px; height: 25px; background: repeating-linear-gradient(transparent 0 6px, #cdd7ed 6px 9px); }
+.sample-hero-position b { font-size: 32px; color: var(--mint); }
+.sample-hero-position.photo-left { flex-direction: row-reverse; }
 .sample-theme { background: #102238; }
 .sample-theme i { background: var(--sample-color, var(--purple)); }
 .sample-theme i:nth-child(2) { opacity: .55; }
@@ -1348,4 +1365,15 @@ body:has(.projection) .app-header { flex-basis: 44px; min-height: 44px; padding:
   .projection .commission-brief { padding: 12px 16px; gap: 8px 24px; }
   .projection .commission-brief h2 { font-size: 24px; }
   .projection .brief-requirement { font-size: 16px; padding: 5px 0; }
+}
+
+@media (max-width: 700px), (max-height: 680px) {
+  .lobby-screen .brief-pane > p { display: none; }
+  .lobby-plan { margin-top: 8px; gap: 5px; }
+  .lobby-plan, .lobby-plan > strong { font-size: 16px; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  .lobby-screen .brief-pane > h2 { display: none; }
+  .lobby-plan { margin-top: 5px; gap: 3px; }
+  .lobby-roles { gap: 4px 10px; }
 }

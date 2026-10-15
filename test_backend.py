@@ -16,7 +16,7 @@ from unittest.mock import patch
 IMPORT_DIR = tempfile.TemporaryDirectory(prefix='kodlabor-import-')
 os.environ['DATA_PATH'] = str(Path(IMPORT_DIR.name) / 'rooms.sqlite3')
 import server
-from project import DEFAULTS, FUNCTIONAL, CATALOGUE
+from project import DEFAULTS, FUNCTIONAL, CATALOGUE, ALL_CATALOGUE, TASKS_PER_PLAYER, group_tasks
 
 
 class SharedProjectTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual(expected, response.status_code, response.get_json())
         return response.get_json()
 
-    def create(self, count=4, mode='group'):
+    def create(self, count=3, mode='group'):
         created = self.post('create', {'admin': self.admin, 'mode': mode})
         self.code, self.host = created['code'], created['token']
         self.tokens = [self.post('join', {'code': self.code, 'name': f'Csapat {index + 1}'})['token'] for index in range(count)]
@@ -69,26 +69,38 @@ class SharedProjectTests(unittest.TestCase):
         return next(task for task in state['tasks'] if task['id'] == task_id)
 
     def test_group_sizes_everyone_has_real_owned_work(self):
-        for count in (4, 6, 20, 35):
+        for count in (3, 6, 9):
             with self.subTest(count=count):
                 state = self.create(count)
-                self.assertGreaterEqual(len(state['tasks']), count)
-                self.assertLessEqual(len(state['tasks']), 36)
+                expected_total = count * TASKS_PER_PLAYER[count]
+                self.assertEqual(expected_total, len(state['tasks']))
+                self.assertEqual([3, 6, 9], state['allowedPlayerCounts'])
+                self.assertEqual(9, state['limit'])
+                self.assertEqual(3, state['minPlayers'])
+                self.assertEqual(TASKS_PER_PLAYER[count], state['tasksPerPlayer'])
+                self.assertEqual(count // 3, state['participantsPerRole'])
+                self.assertEqual(expected_total, state['plannedTotal'])
                 self.assertEqual(count, len({person['id'] for person in state['players']}))
                 for person in state['players']:
                     owned = [task for task in state['tasks'] if task['ownerId'] == person['id']]
-                    self.assertTrue(1 <= len(owned) <= 2, (count, person))
+                    self.assertEqual(TASKS_PER_PLAYER[count], len(owned), (count, person))
                     self.assertTrue(all(task['role'] == person['role'] for task in owned))
                 by_id = {task['id']: task for task in state['tasks']}
                 for task in state['tasks']:
                     self.assertTrue(all(key in by_id for key in task['dependsOn']))
-                if count == 4:
-                    self.assertEqual(['designer', 'developer', 'developer', 'tester'], [person['role'] for person in state['players']])
+                for role in ('designer', 'developer', 'tester'):
+                    self.assertEqual(count // 3, sum(person['role'] == role for person in state['players']))
                 self.assertEqual('working', self.control('start')['status'])
 
     def test_group_minimum_and_demo_zero_to_three(self):
-        self.create(3)
-        self.control('start', 409)
+        for count in (0, 1, 2, 4, 5, 7, 8):
+            with self.subTest(unsupported_count=count):
+                state = self.create(count)
+                self.assertEqual([], state['tasks'])
+                self.assertIsNone(state['tasksPerPlayer'])
+                self.assertEqual(0, state['plannedTotal'])
+                self.control('start', 409)
+                self.control('next', 409)
         for count in range(4):
             self.create(count, 'demo')
             self.start_build()
@@ -96,6 +108,140 @@ class SharedProjectTests(unittest.TestCase):
             self.assertEqual('mint', state['project']['config']['theme'])
             self.assertTrue(all(person['total'] <= 2 for person in state['players']))
         self.post('join', dict(code=self.code, name='Negyedik'), 409)
+
+    def test_each_supported_team_can_finish_every_assigned_task(self):
+        for count in (3, 6, 9):
+            with self.subTest(count=count):
+                self.create(count)
+                state = self.start_build()
+                owners = {self.state(token)['self']['id']: token for token in self.tokens}
+                # Every contribution is submitted under its own player's token.
+                for task in state['tasks']:
+                    if task['kind'] != 'test':
+                        self.submit(task['id'], DEFAULTS[task['key']], owners[task['ownerId']])
+                for task in state['tasks']:
+                    if task['kind'] == 'test':
+                        owner = owners[task['ownerId']]
+                        self.assertTrue(self.probe(task['id'], owner)['passed'])
+                        self.submit(task['id'], 'confirm', owner)
+                finished = self.state()
+                total = count * TASKS_PER_PLAYER[count]
+                self.assertEqual(dict(done=total, total=total), finished['progress'])
+                self.assertTrue(all(person['done'] == person['total'] == TASKS_PER_PLAYER[count]
+                                    for person in finished['players']))
+
+    def test_lobby_plan_updates_when_presence_expires_and_recovers(self):
+        state = self.create(6)
+        self.assertEqual(36, state['plannedTotal'])
+        room = server.load(self.code)
+        room['players'][self.tokens[-1]]['lastSeen'] = time.time() - server.PRESENCE_TIMEOUT - 1
+        server.save(room)
+        state = self.state()
+        self.assertEqual(5, state['connectedCount'])
+        self.assertEqual([], state['tasks'])
+        self.assertIsNone(state['tasksPerPlayer'])
+        self.control('start', 409)
+        self.post('resume', dict(code=self.code, token=self.tokens[-1]))
+        state = self.control('start')
+        self.assertEqual(36, state['plannedTotal'])
+        self.post('leave', dict(code=self.code, token=self.tokens[-1]))
+        state = self.state()
+        self.assertEqual(5, state['connectedCount'])
+        self.assertEqual(6, state['tasksPerPlayer'])
+        self.assertEqual(2, state['participantsPerRole'])
+        self.assertEqual(36, state['plannedTotal'])
+
+    def test_ninth_place_is_atomic_and_full_room_allows_idempotent_rejoin(self):
+        self.create(8)
+
+        def join(index):
+            with server.app.test_client() as client:
+                response = client.post('/api/join', json=dict(code=self.code, name=f'Új {index}',
+                                                             requestId=f'capacity-join-{index}'))
+                return index, response.status_code, response.get_json()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(executor.map(join, range(8)))
+        winners = [result for result in results if result[1] == 200]
+        self.assertEqual(1, len(winners))
+        self.assertEqual(7, sum(status == 409 for _index, status, _result in results))
+        index, _status, winner = winners[0]
+        self.assertEqual(9, len(self.state()['players']))
+        joining = dict(code=self.code, name=f'Új {index}', requestId=f'capacity-join-{index}')
+        self.post('leave', dict(code=self.code, token=winner['token']))
+        self.assertEqual(winner, self.post('join', joining))
+        started = self.control('start')
+        self.post('leave', dict(code=self.code, token=winner['token']))
+        self.assertEqual(winner, self.post('join', joining))
+        self.assertEqual(started['tasks'], self.state()['tasks'])
+        self.assertEqual(9, len(self.state()['players']))
+
+    def test_existing_started_legacy_room_keeps_its_original_tasks(self):
+        self.create(3, 'demo')
+        self.start_build()
+        self.submit('design-theme', 'mint', self.tokens[0])
+        room = server.load(self.code)
+        room['mode'] = 'group'
+        room['deadline'] = time.time() + 120
+        room.pop('participantCount', None)
+        room.pop('participantIds', None)
+        server.save(room)
+        state = self.state()
+        original = [(task['id'], task['ownerId'], task['role'], task['status'], task['value'])
+                    for task in state['tasks']]
+        self.assertEqual(36, len(original))
+        self.post('leave', dict(code=self.code, token=self.tokens[0]))
+        self.post('resume', dict(code=self.code, token=self.tokens[0]))
+        returned = self.state()
+        self.assertEqual(original, [(task['id'], task['ownerId'], task['role'], task['status'], task['value'])
+                                    for task in returned['tasks']])
+        self.assertEqual('mint', returned['project']['config']['theme'])
+
+    def test_finished_legacy_small_group_shows_full_service_without_fake_work(self):
+        self.create(3)
+        self.start_build()
+        self.submit('design-cardCode', DEFAULTS['cardCode'])
+        room = server.load(self.code)
+        # This models a former short task selection without Teljes kozmetika.
+        room['tasks'] = [task for task in room['tasks'] if task['key'] != 'cardNetwork'
+                         and 'design-cardNetwork' not in task['dependsOn']]
+        room.pop('participantCount', None)
+        room.pop('participantIds', None)
+        server.save(room)
+        self.assertNotIn('cardNetwork', self.state()['project']['builtKeys'])
+        self.control('finish')
+        before = server.load(self.code)
+        state = self.state()
+        self.assertIn('cardCode', state['project']['builtKeys'])
+        self.assertIn('cardNetwork', state['project']['builtKeys'])
+        after = server.load(self.code)
+        self.assertEqual(before['tasks'], after['tasks'])
+        self.assertEqual(before['events'], after['events'])
+        self.assertEqual(before['project'], after['project'])
+        self.assertEqual(1, state['progress']['done'])
+        self.create(3)
+        self.start_build()
+        self.submit('design-cardCode', DEFAULTS['cardCode'])
+        state = self.control('finish')
+        self.assertNotIn('cardNetwork', state['project']['builtKeys'])
+        self.assertNotEqual('done', self.task(state, 'design-cardNetwork')['status'])
+
+    def test_report_reopens_reviewed_code_without_unpublishing_its_prerequisites(self):
+        self.create(6)
+        self.start_build()
+        self.submit('code-formRule', 'nonempty')
+        self.submit('code-counterRule', 'one')
+        self.submit('code-countDownRule', 'unbounded')
+        self.assertFalse(self.probe('test-countDownRule')['passed'])
+        state = self.submit('test-countDownRule', 'report')
+        self.assertEqual('issue', self.task(state, 'code-countDownRule')['status'])
+        self.assertEqual('done', self.task(state, 'code-formRule')['status'])
+        self.assertEqual('done', self.task(state, 'code-counterRule')['status'])
+        self.assertIsNone(self.task(state, 'code-formRule')['issue'])
+        self.assertIsNone(self.task(state, 'code-counterRule')['issue'])
+        self.submit('code-countDownRule', 'floor')
+        self.assertTrue(self.probe('test-countDownRule')['passed'])
+        self.submit('test-countDownRule', 'confirm')
 
     def test_demo_has_no_clock_and_advances_only_on_teacher_command(self):
         self.create(0, 'demo')
@@ -128,7 +274,7 @@ class SharedProjectTests(unittest.TestCase):
             self.assertEqual('finished', self.control('next')['status'])
 
     def test_current_task_copy_reaches_existing_rooms_without_losing_work(self):
-        self.create(35)
+        self.create(6)
         self.start_build()
         self.submit('design-title', 'build')
         self.submit('code-buttonTarget', 'signup')
@@ -146,7 +292,9 @@ class SharedProjectTests(unittest.TestCase):
         self.assertIn('bejelentkezés alapján', state['brief'])
         self.assertIn('kitalált kutyanevet', state['brief'])
         self.assertEqual(previous_project, state['project'])
-        for task, current in zip(state['tasks'], CATALOGUE):
+        catalogue = {item['id']: item for item in group_tasks(6)}
+        for task in state['tasks']:
+            current = catalogue[task['id']]
             self.assertEqual(current['title'], task['title'])
             self.assertEqual(current['hint'], task['hint'])
             self.assertEqual(current['options'], task['options'])
@@ -250,10 +398,11 @@ class SharedProjectTests(unittest.TestCase):
         self.submit('test-buttonTarget', 'confirm', tester)
 
     def test_all_functional_checks_follow_selected_configuration(self):
-        self.create(35)
+        self.create(6)
         self.start_build()
-        self.submit('design-cardCode', DEFAULTS['cardCode'])
-        self.submit('design-cardNetwork', DEFAULTS['cardNetwork'])
+        for task in self.state()['tasks']:
+            if task['kind'] != 'test':
+                self.submit(task['id'], DEFAULTS[task['key']])
         for key, good in FUNCTIONAL.items():
             task_id = 'code-' + key
             task = self.task(self.state(), task_id)
@@ -262,11 +411,13 @@ class SharedProjectTests(unittest.TestCase):
             self.assertFalse(self.probe('test-' + key)['passed'], key)
             self.submit(task_id, good)
             self.assertTrue(self.probe('test-' + key)['passed'], key)
+        self.create(0, 'demo')
+        self.start_build()
         self.submit('design-theme', 'amber')
         self.assertTrue(self.probe('test-theme')['passed'])
 
     def test_blank_project_and_first_default_publication_are_distinct(self):
-        for count, mode in ((4, 'group'), (0, 'demo')):
+        for count, mode in ((3, 'group'), (0, 'demo')):
             with self.subTest(mode=mode):
                 state = self.create(count, mode)
                 self.assertEqual([], state['project']['builtKeys'])
@@ -309,7 +460,7 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual('publish', repaired['project']['lastChange']['kind'])
 
     def test_legacy_published_values_and_phase_changes_do_not_fill_missing_work(self):
-        self.create(35)
+        self.create(6)
         self.start_build()
         room = server.load(self.code)
         next(task for task in room['tasks'] if task['key'] == 'hero').update(value='code', done=True)
@@ -592,6 +743,7 @@ class SharedProjectTests(unittest.TestCase):
 
     def test_invalid_data_cors_and_static_allowlist(self):
         self.create()
+        self.post('join', dict(code=self.code, name=[]), 400)
         self.start_build()
         self.submit('design-theme', '<script>', expected=400)
         self.submit('design-theme', {}, expected=400)
@@ -599,7 +751,6 @@ class SharedProjectTests(unittest.TestCase):
         self.post('task', dict(code=self.code, token=self.host, taskId={}, value='mint'), 404)
         self.post('create', dict(admin={}, mode='group'), 401)
         self.post('create', dict(admin=self.admin, mode='oops'), 400)
-        self.post('join', dict(code=self.code, name=[]), 400)
         self.assertEqual(415, self.client.post('/api/task', data='oops').status_code)
         self.assertEqual(400, self.client.post('/api/task', json=[]).status_code)
         self.assertEqual(403, self.client.get('/api/state?code=' + self.code, headers={'Origin': 'https://evil.example'}).status_code)
@@ -625,7 +776,7 @@ class SharedProjectTests(unittest.TestCase):
         self.code, self.host = first['code'], first['token']
         joining = dict(code=self.code, name='Egy valaki', requestId='join-once-123')
         self.assertEqual(self.post('join', joining), self.post('join', joining))
-        for index in range(3):
+        for index in range(2):
             self.post('join', dict(code=self.code, name=f'Társ {index}'))
         self.control('start')
         self.control('next', requestId='next-once-123')
@@ -633,20 +784,19 @@ class SharedProjectTests(unittest.TestCase):
         self.control('pause', requestId='pause-once-123')
         self.assertTrue(self.control('pause', requestId='pause-once-123')['paused'])
 
-    def test_late_join_preserves_existing_completed_work(self):
+    def test_late_join_is_rejected_without_changing_assignments_or_completed_work(self):
         self.create()
         self.start_build()
         self.submit('design-theme', 'mint')
         before = self.state()
-        joined = self.post('join', dict(code=self.code, name='Később érkező'))
-        after = self.state(joined['token'])
-        self.assertTrue(after['self']['taskIds'])
-        self.assertEqual('mint', after['project']['config']['theme'])
-        self.assertEqual(self.task(before, 'design-theme')['ownerId'], self.task(after, 'design-theme')['ownerId'])
-        self.assertEqual('done', self.task(after, 'design-theme')['status'])
+        self.post('join', dict(code=self.code, name='Később érkező'), 409)
+        after = self.state()
+        self.assertEqual(before['tasks'], after['tasks'])
+        self.assertEqual(before['project'], after['project'])
+        self.assertEqual(before['players'], after['players'])
 
     def test_resume_full_room_keeps_identity_assignments_and_completed_work(self):
-        self.create(35)
+        self.create(9)
         self.start_build()
         token = self.tokens[0]
         before = self.state(token)
@@ -655,12 +805,12 @@ class SharedProjectTests(unittest.TestCase):
         self.submit(task['id'], task['options'][0]['value'], token)
         completed = self.state(token)
         self.post('leave', dict(code=self.code, token=token))
-        self.assertEqual(34, self.state()['connectedCount'])
+        self.assertEqual(8, self.state()['connectedCount'])
         resumed = self.post('resume', dict(code=self.code, token=token))
         self.assertEqual(dict(code=self.code, token=token), resumed)
         after = self.state(token)
-        self.assertEqual(35, len(after['players']))
-        self.assertEqual(35, after['connectedCount'])
+        self.assertEqual(9, len(after['players']))
+        self.assertEqual(9, after['connectedCount'])
         self.assertEqual(before['self']['id'], after['self']['id'])
         self.assertEqual(before['self']['role'], after['self']['role'])
         self.assertEqual(owned, after['self']['taskIds'])
@@ -698,7 +848,7 @@ class SharedProjectTests(unittest.TestCase):
         left = self.state(token)
         self.assertFalse(left['self']['active'])
         self.assertFalse(left['self']['connected'])
-        self.assertEqual(3, left['connectedCount'])
+        self.assertEqual(2, left['connectedCount'])
         self.post('leave', dict(code=self.code, token=token))
         self.assertEqual(left['events'], self.state(token)['events'])
         self.assertEqual(original['self']['taskIds'], left['self']['taskIds'])
@@ -707,31 +857,35 @@ class SharedProjectTests(unittest.TestCase):
         self.assertTrue(self.state(token)['self']['connected'])
 
     def test_only_connected_players_count_toward_start_and_receive_initial_tasks(self):
-        self.create(5)
+        self.create(4)
         room = server.load(self.code)
         for person in room['players'].values():
             person['lastSeen'] = time.time() - server.PRESENCE_TIMEOUT - 1
-        ghost_id = room['players'][self.tokens[4]]['id']
+        ghost_id = room['players'][self.tokens[3]]['id']
         server.save(room)
-        for token in self.tokens[:3]:
+        for token in self.tokens[:2]:
             self.state(token)
-        self.assertEqual(3, self.state()['connectedCount'])
+        self.assertEqual(2, self.state()['connectedCount'])
         self.control('start', expected=409)
-        self.post('resume', dict(code=self.code, token=self.tokens[3]))
+        self.post('resume', dict(code=self.code, token=self.tokens[2]))
         started = self.control('start')
-        self.assertEqual(4, started['connectedCount'])
+        self.assertEqual(3, started['connectedCount'])
         self.assertEqual('working', started['status'])
         self.assertEqual(0, next(person for person in started['players'] if person['id'] == ghost_id)['total'])
         self.assertNotIn(ghost_id, [task['ownerId'] for task in started['tasks']])
-        self.assertEqual(4, len({task['ownerId'] for task in started['tasks']}))
-        # A backgrounded tab can return by its ordinary poll, without reloading or rejoining.
-        returned = self.state(self.tokens[4])
-        self.assertTrue(returned['self']['taskIds'])
+        self.assertEqual(3, len({task['ownerId'] for task in started['tasks']}))
+        # A previously disconnected lobby visitor can return, but the started
+        # roster and its exact workloads must not change underneath the team.
+        returned = self.state(self.tokens[3])
+        self.assertEqual([], returned['self']['taskIds'])
         self.assertEqual(ghost_id, returned['self']['id'])
-        repeated = self.state(self.tokens[4])
+        repeated = self.state(self.tokens[3])
         self.assertEqual(returned['self']['taskIds'], repeated['self']['taskIds'])
         self.assertEqual(returned['tasks'], repeated['tasks'])
-        self.assertEqual(5, repeated['connectedCount'])
+        self.assertEqual(started['tasks'], repeated['tasks'])
+        self.assertEqual(4, repeated['connectedCount'])
+        self.assertEqual(9, repeated['tasksPerPlayer'])
+        self.assertEqual(27, repeated['plannedTotal'])
 
     def test_resume_requires_private_token_and_public_state_never_exposes_it(self):
         self.create()
@@ -751,7 +905,7 @@ class SharedProjectTests(unittest.TestCase):
         self.assertNotIn('lastSeen', public)
 
     def test_teacher_removal_revokes_access_and_frees_work_without_resetting_it(self):
-        self.create(3)
+        self.create(2)
         joining = dict(code=self.code, name='Visszatérő', requestId='removed-join-once-123')
         token = self.post('join', joining)['token']
         self.start_build()
@@ -763,7 +917,7 @@ class SharedProjectTests(unittest.TestCase):
         completed = self.state()
         self.post('control', dict(code=self.code, token=self.tokens[0], action='remove-player', playerId=player_id), expected=403)
         removed = self.control('remove-player', playerId=player_id, requestId='remove-member-once-123')
-        self.assertEqual(3, len(removed['players']))
+        self.assertEqual(2, len(removed['players']))
         self.assertNotIn(player_id, [person['id'] for person in removed['players']])
         self.assertEqual(completed['project'], removed['project'])
         self.assertEqual(completed['progress'], removed['progress'])
@@ -782,9 +936,14 @@ class SharedProjectTests(unittest.TestCase):
         self.assertNotIn('self', self.state(token))
         self.probe('test-buttonTarget', token, expected=403)
         self.assertEqual(removed['events'], self.control('remove-player', playerId=player_id, requestId='remove-member-once-123')['events'])
-        rejoined = self.post('join', joining)
-        self.assertNotEqual(token, rejoined['token'])
-        self.assertNotEqual(player_id, self.state(rejoined['token'])['self']['id'])
+        self.post('join', joining, expected=409)
+        # Removed work is still finishable by the teacher, without borrowing
+        # another student's task or changing anyone's original workload.
+        self.submit('code-buttonTarget', 'programs')
+        self.submit('code-buttonTarget', 'signup')
+        self.probe('test-buttonTarget')
+        self.submit('test-buttonTarget', 'confirm')
+        self.assertEqual(9, self.state()['tasksPerPlayer'])
 
     def test_returning_player_survives_backend_restart_with_saved_progress(self):
         self.create()
@@ -822,10 +981,10 @@ class SharedProjectTests(unittest.TestCase):
             resumed = list(executor.map(resume, range(8)))
         self.assertTrue(all(result == dict(code=self.code, token=token) for result in resumed))
         final = self.state(token)
-        self.assertEqual(4, len(final['players']))
+        self.assertEqual(3, len(final['players']))
         self.assertEqual(original['self']['id'], final['self']['id'])
         self.assertEqual(original['tasks'], final['tasks'])
-        self.assertEqual(4, final['connectedCount'])
+        self.assertEqual(3, final['connectedCount'])
 
     def test_resume_cannot_reopen_closed_or_expired_groups(self):
         self.create()
@@ -851,8 +1010,8 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual('amber', state['project']['config']['theme'])
         self.assertEqual('done', self.task(state, 'design-theme')['status'])
 
-    def test_concurrent_35_players_keep_all_submissions(self):
-        self.create(35)
+    def test_concurrent_nine_players_keep_all_submissions(self):
+        self.create(9)
         self.start_build()
         state = self.state()
         for task in state['tasks']:
@@ -872,11 +1031,11 @@ class SharedProjectTests(unittest.TestCase):
                         self.submit(task_id, DEFAULTS[task['key']], token, client=client)
             return True
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=35) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=9) as executor:
             self.assertTrue(all(executor.map(work, assignments)))
         final = self.state()
-        self.assertEqual({'done': 36, 'total': 36}, final['progress'])
-        self.assertEqual(35, len(final['players']))
+        self.assertEqual({'done': 27, 'total': 27}, final['progress'])
+        self.assertEqual(9, len(final['players']))
         self.assertEqual(DEFAULTS, final['project']['config'])
 
     def test_close_is_idempotent_and_blocks_actions(self):

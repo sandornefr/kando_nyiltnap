@@ -12,8 +12,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, request, send_from_directory
-from project import (DEFAULTS, PHASES, ROLE_LABELS, CATALOGUE, PROJECT_VIEWS,
-                     PUBLICATION_LABELS, assign, check, new_tasks, task_dependencies)
+from project import (DEFAULTS, PHASES, ROLE_LABELS, CATALOGUE, ALL_CATALOGUE,
+                     GROUP_SIZES, TASKS_PER_PLAYER, PROJECT_VIEWS,
+                     PUBLICATION_LABELS, assign, check, new_tasks, group_tasks, task_dependencies)
 
 ROOT = Path(__file__).parent
 app = Flask(__name__, static_folder=None)
@@ -70,13 +71,20 @@ def load(code):
         if migrated:
             save(room)
         # Copy changes also reach active rooms without resetting any task progress.
-        catalogue = {task['id']: task for task in CATALOGUE}
+        catalogue = {task['id']: task for task in ALL_CATALOGUE}
+        if room['mode'] == 'group':
+            group_size = sum(connected(person) for person in room['players'].values()) if room['status'] == 'lobby' else room.get('participantCount')
+            catalogue.update({task['id']: task for task in group_tasks(group_size)})
         available = {task['id'] for task in room['tasks']}
         for task in room['tasks']:
             current = catalogue.get(task['id'])
             if current:
                 task.update({key: current[key] for key in ('title', 'hint', 'options')})
                 task['dependsOn'] = task_dependencies(current, available)
+        room['project']['config'] = dict(DEFAULTS, **room['project']['config'])
+        if room['status'] == 'lobby':
+            assign_present(room)
+            save(room)
         update(room)
     return room
 
@@ -161,6 +169,8 @@ def connected(person, now=None):
 
 
 def assign_present(room):
+    if room['status'] != 'lobby':
+        return
     assign(room, [person for person in room['players'].values() if connected(person)])
 
 
@@ -188,15 +198,31 @@ def public(room, player=None, host=False):
                             total=len(owned), me=person is player,
                             active=person.get('active', True), connected=connected(person, now)))
     session_remaining = remaining + sum(phase['duration'] for phase in PHASES[phase_index + 1:]) if automatic and room['status'] == 'working' else 0
+    connected_count = sum(person['connected'] for person in players)
+    participant_count = connected_count if room['status'] == 'lobby' else room.get('participantCount')
+    group_size = participant_count if room['mode'] == 'group' and participant_count in GROUP_SIZES else None
+    built_keys = [task['key'] for task in room['tasks']
+                  if task['kind'] != 'test' and task.get('value') is not None]
+    # Older small groups never received the second service-card assignment.
+    # Restore that service in their completed presentation only; do not invent
+    # a contribution, alter their task history, or complete unfinished new work.
+    if (room['status'] == 'finished' and 'participantCount' not in room
+            and 'cardCode' in built_keys
+            and not any(task['kind'] != 'test' and task['key'] == 'cardNetwork' for task in room['tasks'])):
+        built_keys.append('cardNetwork')
     data = dict(schema=2, code=room['code'], status=room['status'], phase=room['phase'],
                 phaseLabel=PHASES[phase_index]['label'], phases=PHASES, remaining=round(remaining),
                 sessionRemaining=round(session_remaining), paused=room['pause'] is not None,
-                mode=room['mode'], automatic=automatic, limit=35, minPlayers=4, joinUrl=room['joinUrl'], players=players,
-                connectedCount=sum(person['connected'] for person in players),
+                mode=room['mode'], automatic=automatic, limit=3 if room['mode'] == 'demo' else 9,
+                minPlayers=0 if room['mode'] == 'demo' else 3, allowedPlayerCounts=list(GROUP_SIZES),
+                tasksPerPlayer=TASKS_PER_PLAYER.get(group_size),
+                participantsPerRole=group_size // 3 if group_size else None,
+                plannedTotal=group_size * TASKS_PER_PLAYER[group_size] if group_size else
+                             (len(room['tasks']) if room['status'] != 'lobby' or room['mode'] == 'demo' else 0),
+                joinUrl=room['joinUrl'], players=players, connectedCount=connected_count,
                 presentation=room.get('presentation'),
                 project=dict(config=dict(room['project']['config']), revision=room['project']['revision'],
-                             builtKeys=[task['key'] for task in room['tasks']
-                                        if task['kind'] != 'test' and task.get('value') is not None],
+                             builtKeys=built_keys,
                              lastChange=room['project'].get('lastChange'),
                              liveDrafts=sorted(live_drafts(room, now).values(), key=lambda draft: draft['id'], reverse=True),
                              liveTest=room['project'].get('liveTest') if
@@ -370,7 +396,7 @@ def create():
         code = str(secrets.randbelow(900000) + 100000)
     room = dict(schema=2, code=code, host=secrets.token_urlsafe(32), players={}, status='lobby',
                 phase='brief', mode=mode, pause=None, deadline=0, presentation=None, joinUrl=PUBLIC_URL, created=time.time(),
-                project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(len(CATALOGUE) if mode == 'demo' else 6), events=[], eventSequence=0,
+                project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(len(CATALOGUE)) if mode == 'demo' else [], events=[], eventSequence=0,
                 joinRequests={}, controlRequests=[], createRequest=digest)
     event(room, 'Üres oldalból indulunk. A Tücsök weboldalát ti építitek fel.')
     save(room)
@@ -391,15 +417,21 @@ def state():
             player['lastSeen'] = time.time()
             changed = True
         # A backgrounded tab can return by polling, without reloading or resuming.
-        if room['status'] == 'working' and room['phase'] in ('brief', 'build', 'review'):
+        if room['mode'] == 'demo' and room['status'] == 'working' and room['phase'] in ('brief', 'build', 'review'):
             if not any(task['ownerId'] == player['id'] for task in room['tasks']):
                 changed = assign_late(room, player) or changed
         if changed:
+            if room['status'] == 'lobby':
+                assign_present(room)
             save(room)
     return jsonify(public(room, player, host))
 
 
 def assign_late(room, person):
+    # A started group keeps its exact roster and workloads. Reconnection is
+    # allowed, but cannot take another participant's contribution away.
+    if room['mode'] == 'group':
+        return False
     available = [task for task in room['tasks'] if task['ownerId'] is None and not task['done']]
     if not available:
         counts = {player['id']: sum(task['ownerId'] == player['id'] for task in room['tasks']) for player in room['players'].values()}
@@ -420,7 +452,7 @@ def resume_person(room, person):
     person.update(active=True, lastSeen=time.time())
     if room['status'] == 'lobby':
         assign_present(room)
-    elif room['status'] == 'working' and room['phase'] != 'handover':
+    elif room['mode'] == 'demo' and room['status'] == 'working' and room['phase'] != 'handover':
         if not any(task['ownerId'] == person['id'] for task in room['tasks']):
             assign_late(room, person)
 
@@ -484,6 +516,8 @@ def join():
         room['joinRequests'].pop(key, None)
     if room['status'] not in ('lobby', 'working') or room['phase'] == 'handover':
         return error('Ez a csoport már a bemutatónál tart vagy lezárult. Várd meg az új csoportot!', 409)
+    if room['mode'] == 'group' and room['status'] != 'lobby':
+        return error('A csoport már elindult. A korábbi belépéseddel folytathatod, új résztvevőként a következő csoporthoz csatlakozhatsz.', 409)
     name = data.get('name', '')
     if not isinstance(name, str):
         return error('Válassz egy becenevet!')
@@ -492,9 +526,9 @@ def join():
         return error('Válassz egy becenevet!')
     if any(person['name'].casefold() == name.casefold() for person in room['players'].values()):
         return error('Ez a becenév már bent van. A korábbi eszközön válaszd a folytatást; ha nem megy, a tanár törölheti a régi belépést.', 409)
-    limit = 3 if room['mode'] == 'demo' else 35
+    limit = 3 if room['mode'] == 'demo' else 9
     if len(room['players']) >= limit:
-        return error('A bemutató mód legfeljebb 3 résztvevős.' if room['mode'] == 'demo' else 'A csoport megtelt (35 fő).', 409)
+        return error('A bemutató mód legfeljebb 3 résztvevős.' if room['mode'] == 'demo' else 'A csoport megtelt (9 fő).', 409)
     token = secrets.token_urlsafe(24)
     avatar = data.get('avatar', 0)
     if type(avatar) is not int or not 0 <= avatar < 6:
@@ -556,9 +590,12 @@ def control():
         else:
             room['presentation'] = dict(tab=action.removeprefix('code-'), path=False)
     elif action in ('start', 'next') and room['status'] == 'lobby':
-        if room['mode'] != 'demo' and sum(connected(person) for person in room['players'].values()) < 4:
-            return error('A csoportos módhoz legalább 4 jelen lévő résztvevő kell. Kisebb létszámhoz indíts bemutató módot!', 409)
+        participants = [person for person in room['players'].values() if connected(person)]
+        if room['mode'] != 'demo' and len(participants) not in GROUP_SIZES:
+            return error('A csoportos játék pontosan 3, 6 vagy 9 jelen lévő résztvevővel indítható. Minden szerephez ugyanannyi játékos kell.', 409)
         assign_present(room)
+        room['participantCount'] = len(participants)
+        room['participantIds'] = [person['id'] for person in participants]
         room['status'] = 'working'
         room['phase'] = 'brief'
         room['deadline'] = time.time() + PHASES[0]['duration'] if room['mode'] != 'demo' else 0
@@ -652,7 +689,8 @@ def submit_task():
                 return error('Ez az ellenőrzés megfelelő működést látott. Jóváhagyhatod az eredményt.', 409)
             task.update(done=False, issue=probe['hint'], value='report')
             for dependency in task['dependsOn']:
-                dependencies[dependency].update(done=False, issue=probe['hint'])
+                if dependencies[dependency]['key'] == task['key']:
+                    dependencies[dependency].update(done=False, issue=probe['hint'])
             project_change(room, task, actor, 'test-report', 'Javításra visszaküldve: ' + task['title'])
     save(room)
     return jsonify(public(room, player, host))

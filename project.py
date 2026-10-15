@@ -8,12 +8,16 @@ PHASES = [
     {'id': 'handover', 'label': 'Közös bemutató', 'duration': 60},
 ]
 ROLE_LABELS = {'designer': 'Tervező', 'developer': 'Fejlesztő', 'tester': 'Tesztelő'}
+GROUP_SIZES = (3, 6, 9)
+TASKS_PER_PLAYER = {3: 9, 6: 6, 9: 3}
 DEFAULTS = dict(theme='violet', title='discover', intro='curious', hero='code',
                 cardCode='create', cardNetwork='connect', buttonLabel='try',
                 layout='cards', buttonTarget='signup', formRule='nonempty',
                 navTarget='programs', feedback='visible', menuRule='toggle',
                 counterRule='one', filterRule='match', headingSize='large',
-                borderStyle='soft', footerText='community')
+                borderStyle='soft', footerText='community', fontPair='serif',
+                heroPlacement='right', buttonShape='soft', serviceAction='signup',
+                returnTarget='home', countDownRule='floor')
 
 
 def option(value, label, visual=None):
@@ -53,9 +57,18 @@ BUILDERS = [
     design('borderStyle', 'Formázd a kártyák sarkát!', 'A kártyák formája is alakítja az oldal hangulatát.', [option('soft', 'Lekerekített sarkok'), option('square', 'Szögletes sarkok')]),
     design('footerText', 'Építs láblécet!', 'A választott üzenet a lap aljára kerül.', [option('community', 'Szeretettel várunk a Tücsökben.'), option('future', 'Bejelentkezés előzetes egyeztetéssel.'), option('welcome', 'Bejelentkezés alapján')]),
 ]
-BY_KEY = {item['key']: item for item in BUILDERS}
+EXTRA_BUILDERS = [
+    design('fontPair', 'Válassz betűt a címekhez!', 'A címek stílusa az egész oldalon változik.', [option('serif', 'Elegáns, talpas betűk'), option('sans', 'Letisztult, talp nélküli betűk')]),
+    design('heroPlacement', 'Rendezd el a nyitóképet!', 'A fotó a főcím bal vagy jobb oldalán jelenjen meg?', [option('right', 'Fotó a jobb oldalon'), option('left', 'Fotó a bal oldalon')]),
+    design('buttonShape', 'Formázd az oldal gombjait!', 'Próbáld ki a két formát, majd rögzítsd a választásodat!', [option('soft', 'Lekerekített gombok'), option('square', 'Szögletes gombok')]),
+    code('serviceAction', 'Kösd be a kezelés gombját!', 'A szolgáltatáskártya Időpont gombja nyissa meg az időpontkérést.', [option('signup', 'Időpontkérés nyílik meg', 'IDŐPONT GOMB → IDŐPONTKÉRÉS'), option('home', 'A főoldal nyílik meg', 'IDŐPONT GOMB → FŐOLDAL')]),
+    code('returnTarget', 'Készíts visszautat a főoldalra!', 'A Szolgáltatások visszanyila vigyen a főoldalra.', [option('home', 'Vissza a főoldalra', 'VISSZANYÍL → FŐOLDAL'), option('programs', 'A szolgáltatásoknál marad', 'VISSZANYÍL → SZOLGÁLTATÁSOK')]),
+    code('countDownRule', 'Védd meg a kutyaszámlálót!', 'A − gomb eggyel csökkentse a számot, de legalább egy kutya maradjon.', [option('floor', 'Minimum egy kutya', 'ÚJ ÉRTÉK = MAXIMUM(1, RÉGI − 1)'), option('unbounded', 'Nulláig is csökkenthető', 'ÚJ ÉRTÉK = MAXIMUM(0, RÉGI − 1)')]),
+]
+BY_KEY = {item['key']: item for item in BUILDERS + EXTRA_BUILDERS}
 FUNCTIONAL = dict(buttonTarget='signup', formRule='nonempty', navTarget='programs',
-                  feedback='visible', menuRule='toggle', counterRule='one', filterRule='match')
+                  feedback='visible', menuRule='toggle', counterRule='one', filterRule='match',
+                  serviceAction='signup', returnTarget='home', countDownRule='floor')
 CHECK_HINTS = {
     'buttonTarget': ('A fő gomb az időpontkéréshez visz.', 'A fő gomb a szolgáltatásokhoz visz.', 'A kattintás célja az időpontkérő űrlap legyen.'),
     'formRule': ('Üres kutyanévvel nem küldhető el; kitöltve elfogadja az űrlap.', 'Az űrlap üres kutyanevet is elfogad.', 'Előbb ellenőrizd, van-e szöveg a kutyanév mezőben.'),
@@ -64,6 +77,9 @@ CHECK_HINTS = {
     'menuRule': ('Két kattintás után a menü ismét csukva van.', 'Két kattintás után is nyitva marad a menü.', 'A menü állapota minden kattintáskor váltson.'),
     'counterRule': ('Az első + kattintás után a kutyák száma 2.', 'Az első + kattintás után a kutyák száma 3.', 'A + gomb eggyel növelje a kutyák számát.'),
     'filterRule': ('A Fürdetés szűrő csak a Fürdetés szolgáltatást mutatja.', 'A Fürdetés szűrő a Teljes kozmetikát is mutatja.', 'Csak a kiválasztott szolgáltatást jelenítsd meg.'),
+    'serviceAction': ('A kezelés Időpont gombja az időpontkéréshez vezet.', 'A kezelés Időpont gombja a főoldalra vezet.', 'A szolgáltatás gombjának célja az időpontkérés legyen.'),
+    'returnTarget': ('A Szolgáltatások visszanyila megnyitja a főoldalt.', 'A visszanyíl a Szolgáltatások oldalon hagy.', 'A visszanyíl célja a főoldal legyen.'),
+    'countDownRule': ('A − gomb legalább egy kutyát hagy a számlálóban.', 'A − gomb nullára is engedi a kutyák számát.', 'Csökkentés után legalább egy kutya maradjon.'),
 }
 
 
@@ -77,6 +93,11 @@ REVIEW_TITLES = {
     'menuRule': 'Nyisd ki, majd csukd be a menüt!', 'counterRule': 'Növeld a kutyák számát!',
     'filterRule': 'Válaszd a Fürdetés szűrőt!', 'headingSize': 'Nézd meg a címméretet!',
     'borderStyle': 'Nézd meg a kártyák sarkát!', 'footerText': 'Olvasd el a záróüzenetet!',
+    'fontPair': 'Nézd meg a címek betűit!', 'heroPlacement': 'Nézd meg a fotó helyét!',
+    'buttonShape': 'Nézd meg a gombok formáját!',
+    'serviceAction': 'Próbáld ki a kezelés gombját!',
+    'returnTarget': 'Térj vissza a főoldalra!',
+    'countDownRule': 'Próbálj nulla kutyát beállítani!',
 }
 REVIEW_HINTS = {
     'buttonTarget': 'Nyomd meg a fő gombot! Az időpontkéréshez visz?',
@@ -89,6 +110,9 @@ REVIEW_HINTS = {
     'cardCode': 'A Szolgáltatásoknál nézd meg a Fürdetés kártyáját!',
     'cardNetwork': 'A Szolgáltatásoknál nézd meg a Teljes kozmetika kártyáját!',
     'footerText': 'Keresd a záróüzenetet az oldal alján!',
+    'serviceAction': 'Szolgáltatások → Időpont. Az időpontkéréshez vezet?',
+    'returnTarget': 'Nyisd meg a Szolgáltatásokat, majd nyomd meg a visszanyilat!',
+    'countDownRule': 'Válassz szabad időpontot! Növeld kettőre, majd csökkentsd egyre. Egynél leáll a − gomb?',
 }
 
 
@@ -99,11 +123,26 @@ def review(builder):
                 role='tester', kind='test', options=[option('confirm', 'Működik, jóváhagyom'), option('report', 'Javítást kérek')], dependsOn=[builder['id']])
 
 
-# Six core tasks work for four participants; further pairs add distinct visible contributions.
+# Preserve the former catalogue for demonstrations and already running rooms.
 CATALOGUE = BUILDERS[:4] + [review(BUILDERS[2]), review(BUILDERS[3])]
 for _builder in BUILDERS[4:-1]:
     CATALOGUE += [_builder, review(_builder)]
 CATALOGUE += [review(BUILDERS[0]), review(BUILDERS[1]), BUILDERS[-1], review(BUILDERS[-1])]
+
+# A whole group builds one site. Stable IDs let earlier rooms keep their work;
+# only new group sessions classify page structure and footer markup as coding.
+GROUP_BUILDERS = deepcopy(BUILDERS)
+for _builder in GROUP_BUILDERS:
+    if _builder['key'] in ('layout', 'footerText'):
+        _builder.update(role='developer', kind='code')
+        for _option in _builder['options']:
+            _option['visual'] = ('<section>…</section>' if _builder['key'] == 'layout'
+                                 else '<footer>…</footer>')
+GROUP_REVIEW_KEYS = ('buttonTarget', 'formRule', 'navTarget', 'feedback', 'menuRule',
+                     'counterRule', 'filterRule', 'title', 'hero')
+GROUP_CORE = GROUP_BUILDERS + [review(BY_KEY[key]) for key in GROUP_REVIEW_KEYS]
+GROUP_EXTENDED = GROUP_CORE + EXTRA_BUILDERS + [review(builder) for builder in EXTRA_BUILDERS if builder['role'] == 'developer']
+ALL_CATALOGUE = CATALOGUE + EXTRA_BUILDERS + [review(builder) for builder in EXTRA_BUILDERS]
 
 # A route can be tested while its destination is still empty. Controls inside
 # that destination need their actual UI first; no prerequisite publishes it.
@@ -114,11 +153,15 @@ TEST_PREREQUISITES = {
     'filterRule': ['design-cardCode', 'design-cardNetwork'],
     'headingSize': ['design-title'],
     'borderStyle': ['design-layout'],
+    'serviceAction': ['design-cardCode'],
+    'returnTarget': ['design-layout'],
+    'countDownRule': ['code-formRule', 'code-counterRule'],
 }
 PROJECT_VIEWS = {
     'cardCode': 'programs', 'cardNetwork': 'programs', 'layout': 'programs',
     'navTarget': 'programs', 'filterRule': 'programs', 'borderStyle': 'programs',
     'formRule': 'signup', 'feedback': 'signup', 'counterRule': 'signup',
+    'serviceAction': 'programs', 'returnTarget': 'programs', 'countDownRule': 'signup',
 }
 PUBLICATION_LABELS = {
     'theme': 'Megérkeztek a színek', 'title': 'Főcím került az oldalra',
@@ -130,6 +173,11 @@ PUBLICATION_LABELS = {
     'menuRule': 'Elkészült a nyitható menü', 'counterRule': 'Elkészült a kutyaszámláló',
     'filterRule': 'Elkészült a szolgáltatásszűrő', 'headingSize': 'Megváltozott a főcím mérete',
     'borderStyle': 'Megváltozott a kártyák formája', 'footerText': 'Lábléc került az oldalra',
+    'fontPair': 'Megváltozott a címek betűtípusa', 'heroPlacement': 'Új helyre került a nyitókép',
+    'buttonShape': 'Megváltozott a gombok formája',
+    'serviceAction': 'Elkészült a kezelések időpontkérő gombja',
+    'returnTarget': 'Elkészült a visszaút a főoldalra',
+    'countDownRule': 'A kutyaszámláló legalább egy kutyát kér',
 }
 
 
@@ -143,26 +191,48 @@ def task_dependencies(task, available):
 
 
 def task_count(players):
-    return max(6, min(36, players + players % 2))
+    return players * TASKS_PER_PLAYER.get(players, 0)
 
 
 def new_tasks(count):
-    tasks = [dict(deepcopy(item), ownerId=None, done=False, issue=None, value=None, publishVersion=0, probes={}) for item in CATALOGUE[:count]]
+    return prepare_tasks(CATALOGUE[:count])
+
+
+def prepare_tasks(catalogue):
+    tasks = [dict(deepcopy(item), ownerId=None, done=False, issue=None, value=None, publishVersion=0, probes={}) for item in catalogue]
     available = {task['id'] for task in tasks}
     for task in tasks:
         task['dependsOn'] = task_dependencies(task, available)
     return tasks
 
 
+def group_tasks(player_count):
+    """Distinct contributions for one supported, balanced group size."""
+    if player_count not in GROUP_SIZES:
+        return []
+    return prepare_tasks(GROUP_EXTENDED if player_count == 6 else GROUP_CORE)
+
+
 def assign(room, people=None):
-    """Before starting, distribute same-role tasks with one or two per player."""
+    """Give group members equal loads within three equally sized roles."""
     people = sorted((person for person in room['players'].values() if person.get('active', True)) if people is None else people,
                     key=lambda person: person['order'])
-    tasks = new_tasks(len(CATALOGUE) if room['mode'] == 'demo' else task_count(len(people)))
+    tasks = new_tasks(len(CATALOGUE)) if room['mode'] == 'demo' else group_tasks(len(people))
     room['tasks'] = tasks
     if not people:
         return
     grouped = {role: [task for task in tasks if task['role'] == role] for role in ROLE_LABELS}
+    if room['mode'] != 'demo':
+        if len(people) not in GROUP_SIZES:
+            return
+        per_role = len(people) // 3
+        for role_index, (role, role_tasks) in enumerate(grouped.items()):
+            owners = people[role_index * per_role:(role_index + 1) * per_role]
+            for person in owners:
+                person['role'] = role
+            for task_index, task in enumerate(role_tasks):
+                task['ownerId'] = owners[task_index % per_role]['id']
+        return
     slots = {role: len(items) for role, items in grouped.items()}
     while sum(slots.values()) > len(people):
         candidates = [role for role, count in slots.items() if count > (len(grouped[role]) + 1) // 2]

@@ -24,7 +24,7 @@ const taskById=id=>state?.tasks?.find(t=>t.id===id);
 const button=(label,action,classes='')=>`<button type="button" class="button ${classes}" data-action="${action}">${label}</button>`;
 const pageMeasurements=new Map();
 const sortedTasks=()=>[...(state?.tasks||[])].sort((a,b)=>({issue:0,ready:1,locked:2,done:3}[a.status]-{issue:0,ready:1,locked:2,done:3}[b.status]));
-function personItem(p){return `<div class="list-item person ${p.connected===false?'person-away':''}"><span class="avatar" aria-hidden="true">${esc(p.name.slice(0,1))}</span><div><strong>${esc(p.name)}</strong><span class="role">${esc(p.roleLabel||roleLabels[p.role]||'Csatlakozott')}</span><span class="presence">${p.active===false?'Kilépett':p.connected===false?'Nincs kapcsolat':'Kapcsolódva'}</span></div><div class="person-controls"><span class="status">${p.total?`${p.done}/${p.total}`:'✓'}</span>${view==='host'?`<button type="button" class="button quiet manage-person" data-person="${esc(p.id)}" aria-label="${esc(p.name)} kezelése">Kezelés</button>`:''}</div></div>`;}
+function personItem(p){return `<div class="list-item person ${p.connected===false?'person-away':''}"><span class="avatar" aria-hidden="true">${esc(p.name.slice(0,1))}</span><div><strong>${esc(p.name)}</strong><span class="role">${esc(p.total?(p.roleLabel||roleLabels[p.role]||'Csapattag'):'Beosztásra vár')}</span><span class="presence">${p.active===false?'Kilépett':p.connected===false?'Nincs kapcsolat':'Kapcsolódva'}</span></div><div class="person-controls"><span class="status">${p.total?`${p.done}/${p.total}`:'—'}</span>${view==='host'?`<button type="button" class="button quiet manage-person" data-person="${esc(p.id)}" aria-label="${esc(p.name)} kezelése">Kezelés</button>`:''}</div></div>`;}
 function taskItem(t){return `<button type="button" class="list-item task-row" data-task="${esc(t.id)}"><div><span class="role">${esc(t.ownerName||'Tanári feladat')}</span><strong class="task-title">${esc(t.title)}</strong></div><span class="status ${esc(t.status)}">${taskStatus(t)}</span></button>`;}
 function pageSize(kind){
   // Fit the actual panel, including wrapped titles, instead of guessing from screen height.
@@ -96,7 +96,7 @@ function hostStart(){
   $('#help').hidden=false;
   $('#context').textContent='Tanári irányítópult';
   if(!admin){app.innerHTML=`<section class="screen entry login-screen welcome-entry"><div class="entry-art">${welcomeCode()}</div><form class="entry-form form-stack" id="login-form"><span class="eyebrow">KANDÓ KÓDLABOR</span><h1>Tanári belépés</h1><label class="field">Jelszó<input id="password" type="password" autocomplete="current-password" required></label><button type="submit" class="button primary">Belépés →</button></form></section>`;return;}
-  app.innerHTML=`<section class="screen host-intro"><div class="intro-top"><div class="intro-heading"><span class="eyebrow">ÜDV A KANDÓ KÓDLABORBAN</span><h1>Egy weboldal. Egy csapat</h1><p>Mai megbízás: egy kutyakozmetika oldala.</p></div>${welcomeCode()}</div><div class="workflow-overview"><div class="workflow-card"><b>01</b><h2>Te indítasz</h2><p>A megbízást a kivetítőn mutatod.</p></div><div class="workflow-card"><b>02</b><h2>A diákok alkotnak</h2><p>Telefonon kapnak saját feladatot.</p></div><div class="workflow-card"><b>03</b><h2>Az oldal változik</h2><p>Együtt látjátok és kipróbáljátok.</p></div></div><div class="mode-options">${button('<b>Kipróbálom egyedül →</b><span>Végigvezetés · nincs időkorlát</span>','create-demo','mode-option mode-option-primary primary')}${button('<b>Csoporttal indítok →</b><span>4–35 fő · kb. 8 perc beszélgetéssel</span>','create-group','mode-option secondary')}</div><p class="intro-footnote">Első alkalom? Kezdd az egyedüli kipróbálással.</p></section>`;
+  app.innerHTML=`<section class="screen host-intro"><div class="intro-top"><div class="intro-heading"><span class="eyebrow">ÜDV A KANDÓ KÓDLABORBAN</span><h1>Egy weboldal. Egy csapat</h1><p>Mai megbízás: egy kutyakozmetika oldala.</p></div>${welcomeCode()}</div><div class="workflow-overview"><div class="workflow-card"><b>01</b><h2>Te indítasz</h2><p>A megbízást a kivetítőn mutatod.</p></div><div class="workflow-card"><b>02</b><h2>A diákok alkotnak</h2><p>Telefonon kapnak saját feladatot.</p></div><div class="workflow-card"><b>03</b><h2>Az oldal változik</h2><p>Együtt látjátok és kipróbáljátok.</p></div></div><div class="mode-options">${button('<b>Kipróbálom egyedül →</b><span>Végigvezetés · nincs időkorlát</span>','create-demo','mode-option mode-option-primary primary')}${button('<b>Csoporttal indítok →</b><span>3, 6 vagy 9 fő · közös weboldal</span>','create-group','mode-option secondary')}</div><p class="intro-footnote">Első alkalom? Kezdd az egyedüli kipróbálással.</p></section>`;
 }
 function renderStart(){clearLiveDrafts();dismissSourceDialog();$('#code-modal')?.remove();structuralKey='';mountedRevision='';if(view==='host')hostStart();else if(view==='screen')app.innerHTML='<section class="screen waiting-panel"><h1>Nyisd meg a kivetítőt<br>a tanári felületről</h1></section>';else entry();}
 async function create(mode){
@@ -126,9 +126,19 @@ function teamPanel(){return `<div class="team-tabs">${button('Feladatok','pane-t
 function phaseStrip(){return `<div class="phase-strip">${Object.entries(phaseLabels).map(([k,v],i)=>`<div class="phase-step ${k===state.phase?'current':''}"><span>${i+1}</span>${v}</div>`).join('')}</div>`;}
 function hostControls(){
   if(['finished','closed'].includes(state.status))return (state.status==='finished'&&!isDemo()?button('A kód mögötte','code-reveal','secondary'):'')+button('Új csoport','new-group','primary');
-  if(state.status==='lobby'){const connected=state.connectedCount??state.players.length;return `<button class="button primary" data-action="start" ${state.mode!=='demo'&&connected<4?'disabled':''}>${state.mode==='demo'?'Bemutató indítása':connected<4?'Még '+(4-connected)+' kapcsolódó kell':'Megbízás bemutatása →'}</button>`+button('Új csoport','new-group','quiet');}
+  if(state.status==='lobby'){const plan=groupPlan();return `<button class="button primary" data-action="start" ${state.mode!=='demo'&&!plan.valid?'disabled':''}>${state.mode==='demo'?'Bemutató indítása':plan.valid?'Megbízás bemutatása →':plan.next?'Még '+(plan.next-plan.connected)+' kapcsolódó kell':'Legfeljebb 9 résztvevő'}</button>`+button('Új csoport','new-group','quiet');}
   if(state.mode==='demo')return button('Új csoport','new-group','quiet');
   return (state.phase==='handover'?button('A kód mögötte','code-reveal','secondary'):button(state.paused?'Folytatás':'Megbeszélés / szünet','pause','secondary'))+button(({brief:'Munka indítása →',build:'Teszteléshez →',review:'Közös bemutató →',handover:'Lezárás'})[state.phase],state.phase==='handover'?'finish':'next','primary');
+}
+function groupPlan(){
+  const connected=state.connectedCount??state.players?.filter(p=>p.active!==false&&p.connected!==false).length??0;
+  const allowed=state.allowedPlayerCounts||[3,6,9],valid=allowed.includes(connected);
+  return {connected,allowed,valid,next:allowed.find(n=>n>connected),perRole:valid?(state.participantsPerRole??connected/3):null,perPlayer:valid?(state.tasksPerPlayer??({3:9,6:6,9:3})[connected]):null};
+}
+function lobbyPlan(){
+  if(state.mode==='demo')return '<span>A tanár minden szerepet kipróbálhat.</span>';
+  const plan=groupPlan();
+  return plan.valid?`<div class="lobby-roles"><span><b>${plan.perRole}</b> tervező</span><span><b>${plan.perRole}</b> fejlesztő</span><span><b>${plan.perRole}</b> tesztelő</span></div><strong>${plan.perPlayer} feladat fejenként · ${plan.connected*plan.perPlayer} közösen</strong>`:`<strong>Indulás: ${plan.allowed.join(', ')} fővel</strong><span>${plan.next?`Még ${plan.next-plan.connected} csatlakozóra várunk.`:'A csoport megtelt.'}</span>`;
 }
 const isDemo=()=>view==='host'&&state?.mode==='demo';
 function nextDemoTask(){return state.tasks.find(t=>t.status==='issue')||state.tasks.find(t=>t.kind!=='test'&&t.status==='ready')||state.tasks.find(t=>t.status==='ready');}
@@ -154,7 +164,7 @@ async function demoNext(){
 }
 function lobby(){
   const host=view==='host',url=new URL(state.joinUrl||pageURL(''));
-  app.innerHTML=`<section class="screen host-screen lobby-screen"><div class="session-top"><div><span class="eyebrow">${state.mode==='demo'?'BEMUTATÓ':'CSAPATGYŰJTÉS'}</span><h1>Ma ti vagytok a fejlesztőcsapat</h1></div>${host?`<div class="session-controls">${button('Kivetítő ↗','projector','secondary')}</div>`:''}</div><div class="lobby-layout"><div class="brief-pane"><span class="eyebrow">CSATLAKOZZ A TELEFONODON</span><div class="join-code">${esc(state.code)}</div><div class="join-address">${esc(url.host+url.pathname)}</div><h2>Tücsök Kutyakozmetika</h2><p>Az oldal tervezése, fejlesztése és tesztelése a ti feladatotok.</p><div class="lobby-summary"><b id="player-count">${state.connectedCount??state.players.length}</b> kapcsolatban <span>· ${state.mode==='demo'?'tanári bemutató':'4–35 fő'}</span></div></div><div class="people-pane"><div class="pane-heading"><h2>A csapat</h2></div><div id="lobby-roster">${personRows()}</div></div></div><div class="host-footer"><span class="muted">${state.mode==='demo'?'A tanár minden szerepet kipróbálhat.':'1 perc belépés · 6 perc projekt · 1 perc közös zárás'}</span>${host?`<div class="session-controls" id="host-controls">${hostControls()}</div>`:'<span>A tanár indítja a projektet.</span>'}</div></section>`;
+  app.innerHTML=`<section class="screen host-screen lobby-screen"><div class="session-top"><div><span class="eyebrow">${state.mode==='demo'?'BEMUTATÓ':'CSAPATGYŰJTÉS'}</span><h1>Ma ti vagytok a fejlesztőcsapat</h1></div>${host?`<div class="session-controls">${button('Kivetítő ↗','projector','secondary')}</div>`:''}</div><div class="lobby-layout"><div class="brief-pane"><span class="eyebrow">CSATLAKOZZ A TELEFONODON</span><div class="join-code">${esc(state.code)}</div><div class="join-address">${esc(url.host+url.pathname)}</div><h2>Tücsök Kutyakozmetika</h2><p>Az oldal tervezése, fejlesztése és tesztelése a ti feladatotok.</p><div class="lobby-summary"><b id="player-count">${state.connectedCount??state.players.length}</b> kapcsolatban <span>· ${state.mode==='demo'?'tanári bemutató':'legfeljebb 9 fő'}</span></div><div class="lobby-plan" id="lobby-plan">${lobbyPlan()}</div></div><div class="people-pane"><div class="pane-heading"><h2>A csapat</h2></div><div id="lobby-roster">${personRows()}</div></div></div><div class="host-footer"><span class="muted">${state.mode==='demo'?'A tanár minden szerepet kipróbálhat.':'1 perc belépés · 6 perc projekt · 1 perc közös zárás'}</span>${host?`<div class="session-controls" id="host-controls">${hostControls()}</div>`:'<span>A tanár indítja a projektet.</span>'}</div></section>`;
   scheduleListFit();
 }
 function hostShell(){
@@ -166,11 +176,11 @@ function hostShell(){
   mountedRevision='';patchHost();scheduleListFit();
 }
 const builtKeys=()=>state.project.builtKeys||state.tasks.filter(t=>t.kind!=='test'&&t.value!=null).map(t=>t.key);
-const siteViewFor=key=>KandoSite.viewForKey?.(key)||(['cardCode','cardNetwork','layout','filterRule'].includes(key)?'programs':['formRule','feedback','counterRule'].includes(key)?'signup':'home');
+const siteViewFor=key=>KandoSite.viewForKey?.(key)||(['cardCode','cardNetwork','layout','filterRule','serviceAction','returnTarget'].includes(key)?'programs':['formRule','feedback','counterRule','countDownRule'].includes(key)?'signup':'home');
 function mountSite(el,compact=false,onAction,options={}){
   if(!el)return;
-  const opts={compact,builtKeys:builtKeys(),...options},config=opts.config||state.project.config;
-  const signature=JSON.stringify([config,opts.builtKeys,compact]);
+  const opts={compact,builtKeys:builtKeys(),plannedKeys:state.tasks.filter(t=>t.kind!=='test').map(t=>t.key),...options},config=opts.config||state.project.config;
+  const signature=JSON.stringify([config,opts.builtKeys,opts.plannedKeys,compact]);
   if(el._siteSignature===signature&&el._siteController&&!opts.view)return el._siteController;
   el._siteSignature=signature;
   if(el._siteController?.update){el._siteController.update(config,opts);return el._siteController;}
@@ -205,7 +215,7 @@ function contributionNotice(actor,description,kind='Rögzítve'){
   if(el.innerHTML!==markup)el.innerHTML=markup;
 }
 function patchHost(){
-  if(state.status==='lobby'){if($('#player-count'))$('#player-count').textContent=state.connectedCount??state.players.length;if($('#lobby-roster')&&!$('#person-modal')){const html=personRows();if($('#lobby-roster').innerHTML!==html)$('#lobby-roster').innerHTML=html;}if($('#host-controls'))$('#host-controls').innerHTML=hostControls();return;}
+  if(state.status==='lobby'){if($('#lobby-plan'))$('#lobby-plan').innerHTML=lobbyPlan();if($('#player-count'))$('#player-count').textContent=state.connectedCount??state.players.length;if($('#lobby-roster')&&!$('#person-modal')){const html=personRows();if($('#lobby-roster').innerHTML!==html)$('#lobby-roster').innerHTML=html;}if($('#host-controls'))$('#host-controls').innerHTML=hostControls();return;}
   if($('#clock'))$('#clock').textContent=state.mode==='demo'?'Saját tempó':state.paused?'Szünet':'Váltás: '+fmt(state.remaining);
   if($('#demo-content')&&!demoAllTasks&&!modalTask){const html=demoGuide();if($('#demo-content').innerHTML!==html)$('#demo-content').innerHTML=html;}
   if($('#contribution-count'))$('#contribution-count').textContent=`${state.progress?.done||0} / ${state.progress?.total||0} feladat`;
@@ -228,9 +238,13 @@ function patchHost(){
   if(modalTask)patchTaskDraft();
 }
 const myTasks=()=> (state?.self?.taskIds||[]).map(taskById).filter(Boolean);
-function chooseTask(){const list=myTasks(),current=taskById(activeTask),ready=list.find(t=>t.status==='issue')||list.find(t=>t.status==='ready');if(current&&list.includes(current)&&(current.status!=='done'||expandedTask)&&!(current.status==='locked'&&ready))return current;return ready||list.find(t=>t.status==='locked')||list[0];}
-function playerTop(){return `<div class="player-top"><div><strong>${esc(state.self?.name||'Tanár')}</strong><span class="role">${esc(state.self?.roleLabel||roleLabels[state.self?.role]||'A csapat tagja')}</span></div><span>${state.paused?'Szünet':esc(phaseLabels[state.phase]||'Csatlakozás')}</span></div>`;}
+function chooseTask(){const list=myTasks(),current=taskById(activeTask),ready=list.find(t=>t.status==='issue')||list.find(t=>t.status==='ready');if(current&&list.includes(current)&&(current.status!=='done'||expandedTask)&&!(current.status==='locked'&&ready&&!expandedTask))return current;return ready||list.find(t=>t.status==='locked')||list[0];}
+function playerTop(){const total=myTasks().length,done=myTasks().filter(t=>t.status==='done').length;return `<div class="player-top"><div><strong>${esc(state.self?.name||'Tanár')}</strong><span class="role">${esc(state.status==='lobby'&&!total?'Beosztásra vár':state.self?.roleLabel||roleLabels[state.self?.role]||'A csapat tagja')}${total?` · ${done}/${total} kész`:''}</span></div><span>${state.paused?'Szünet':esc(phaseLabels[state.phase]||'Csatlakozás')}</span></div>`;}
 function playerWaiting(title,text,action=''){app.innerHTML=`<section class="screen player-screen">${playerTop()}<div class="waiting-panel"><span class="role-mark" aria-hidden="true">&lt;/&gt;</span><h1>${title}</h1><p>${text}</p>${action}</div><div class="task-actions">${button('Kilépek a csoportból','leave','quiet')}</div></section>`;}
+function playerTaskNav(t){
+  const list=myTasks(),index=list.findIndex(x=>x.id===t.id),done=list.filter(x=>x.status==='done').length;
+  return `<nav class="player-task-nav" aria-label="Saját feladataid"><div class="task-pager"><button type="button" class="button quiet" data-action="task-prev" aria-label="Előző feladat" ${index<=0?'disabled':''}>←</button><span class="task-position"><strong>${index+1} / ${list.length}</strong><span>${done} kész</span></span><button type="button" class="button quiet" data-action="task-next" aria-label="Következő feladat" ${index>=list.length-1?'disabled':''}>→</button></div>${button('Közös oldal','preview','quiet')}</nav>`;
+}
 function choiceVisual(t,o){
   const value=String(o.value),palettes={violet:'#6e5470',mint:'#42634b',amber:'#a55231'};
   if(t.key==='theme')return `<span class="choice-sample sample-theme" style="--sample-color:${palettes[value]||'#b5a0f7'}"><i></i><i></i><i></i></span>`;
@@ -238,9 +252,12 @@ function choiceVisual(t,o){
   if(t.key==='hero')return `<span class="choice-sample sample-photo"><img src="assets/${{code:'grooming',network:'bath',team:'dog'}[value]||'dog'}.jpg" alt="${esc(o.label)}"></span>`;
   if(t.key==='borderStyle')return `<span class="choice-sample sample-shape ${value==='square'?'square':''}"></span>`;
   if(t.key==='headingSize')return `<span class="choice-sample sample-type ${value==='large'?'large':''}">Aa</span>`;
+  if(t.key==='fontPair')return `<span class="choice-sample sample-type ${value==='serif'?'sample-serif':''}">Aa</span>`;
+  if(t.key==='buttonShape')return `<span class="choice-sample sample-button ${value==='square'?'square':''}">Időpont</span>`;
+  if(t.key==='heroPlacement')return `<span class="choice-sample sample-hero-position ${value==='left'?'photo-left':''}"><i></i><b>▧</b></span>`;
   return `<span class="choice-sample sample-text">${esc(o.label)}</span>`;
 }
-const codeEvent=t=>({buttonTarget:'Kattintás az időpontkérésre',formRule:'Időpontkérés elküldése',navTarget:'Kattintás a Szolgáltatásokra',feedback:'Sikeres időpontkérés',menuRule:'Kattintás a menüre',counterRule:'Kattintás a + gombra',filterRule:'Kezelés kiválasztása'})[t.key]||'A látogató használja az oldalt';
+const codeEvent=t=>({buttonTarget:'Kattintás az időpontkérésre',formRule:'Időpontkérés elküldése',navTarget:'Kattintás a Szolgáltatásokra',feedback:'Sikeres időpontkérés',menuRule:'Kattintás a menüre',counterRule:'Kattintás a + gombra',filterRule:'Kezelés kiválasztása',serviceAction:'Kattintás a kezelés időpontgombjára',returnTarget:'Kattintás a vissza nyílra',countDownRule:'Kattintás a − gombra',layout:'Megnyílik a Szolgáltatások oldal',footerText:'Megjelenik az oldal lábléce'})[t.key]||'A látogató használja az oldalt';
 function taskInstruction(t){return ({formRule:'Kutyusnév nélkül ne lehessen időpontot kérni.',theme:'Válassz színt, majd alkalmazd a közös oldalon!'})[t.key]||t.hint?.split('. ')[0]||'Válassz, majd mentsd el!';}
 function taskMarkup(t,teacher=false){
   const readOnly=state.paused||!['build','review'].includes(state.phase)||['finished','closed'].includes(state.status);
@@ -255,13 +272,13 @@ function taskMarkup(t,teacher=false){
 }
 function renderPlayer(force=false){
   if(previewOpen){patchPreview();return;}
-  if(state.status==='lobby'){if(structuralKey!=='player-lobby'){playerWaiting('Benne vagy a csapatban','A tanár indítása után megkapod a feladatod.');structuralKey='player-lobby';}return;}
+  if(state.status==='lobby'){const plan=groupPlan(),key='player-lobby'+plan.connected+plan.perPlayer;if(structuralKey!==key){playerWaiting('Benne vagy a csapatban',plan.valid?`Indítás után ${plan.perPlayer} saját feladatot kapsz.`:'A tanár indítása után megkapod a feladataidat.');structuralKey=key;}return;}
   if(['finished','closed'].includes(state.status)||state.phase==='handover'){const key='player-end'+state.status;if(structuralKey!==key){playerWaiting('Ezt együtt készítettük',`${state.self?.name?esc(state.self.name)+', ':''}nézd meg a közös oldalunkat!`,button('Megnézem az oldalt','preview','primary'));structuralKey=key;}return;}
-  if(state.paused||state.phase==='brief'){const key='player-pause'+state.paused+state.phase;if(structuralKey!==key){playerWaiting(state.paused?'Nézz a kivetítőre!':'Készítsetek oldalt a Tücsök Kutyakozmetikának!',state.paused?'Most a csapat egyeztet.':`A te szereped: ${esc(state.self?.roleLabel||roleLabels[state.self?.role]||'csapattag')}.`);structuralKey=key;}return;}
+  if(state.paused||state.phase==='brief'){const key='player-pause'+state.paused+state.phase+myTasks().length;if(structuralKey!==key){playerWaiting(state.paused?'Nézz a kivetítőre!':'Készítsetek oldalt a Tücsök Kutyakozmetikának!',state.paused?'Most a csapat egyeztet.':`A te szereped: ${esc(state.self?.roleLabel||roleLabels[state.self?.role]||'csapattag')} · ${myTasks().length} feladat`);structuralKey=key;}return;}
   const t=chooseTask();if(!t){playerWaiting('Már dolgozik a csapat','A tanár tud feladatot adni.',button('Megnézem az oldalt','preview','primary'));return;}activeTask=t.id;
   if(myTasks().every(x=>x.status==='done')&&!expandedTask){const key='player-done';if(structuralKey!==key){playerWaiting('A te részed elkészült','Most figyeld, hogyan épül tovább az oldal.',button('Megnézem az oldalt','preview','primary')+button('Finomítok rajta','edit-own','quiet'));structuralKey=key;}return;}
-  const signature=JSON.stringify([t.id,t.status,t.issue,state.phase,state.paused,expandedTask]);if(!force&&taskSignature===signature&&structuralKey==='task'){patchTaskDraft();return;}taskSignature=signature;structuralKey='task';
-  app.innerHTML=`<section class="screen player-screen">${playerTop()}${taskMarkup(t)}<div class="player-task-nav">${myTasks().length>1?myTasks().map((x,i)=>`<button type="button" class="button quiet ${x.id===t.id?'selected':''}" data-own-task="${esc(x.id)}">${i+1}. ${x.status==='done'?'✓':x.kind==='test'?'Próba':'Feladat'}</button>`).join(''):''}${button('Közös oldal','preview','quiet')}</div></section>`;
+  const signature=JSON.stringify([t.id,t.status,t.issue,state.phase,state.paused,expandedTask,myTasks().map(x=>[x.id,x.status])]);if(!force&&taskSignature===signature&&structuralKey==='task'){patchTaskDraft();return;}taskSignature=signature;structuralKey='task';
+  app.innerHTML=`<section class="screen player-screen">${playerTop()}${taskMarkup(t)}${playerTaskNav(t)}</section>`;
   patchTaskDraft(true);
 }
 function recordPreviewAction(event){
@@ -276,7 +293,10 @@ function recordPreviewAction(event){
     feedback:()=>seen.some(e=>e.action==='submit'&&e.detail?.empty===false),
     menuRule:()=>seen.filter(e=>e.action==='menu').length>=2,
     counterRule:()=>seen.some(e=>e.action==='counter'&&e.detail?.delta>0),
-    filterRule:()=>seen.some(e=>e.action==='filter'&&e.detail?.selected==='code')
+    filterRule:()=>seen.some(e=>e.action==='filter'&&e.detail?.selected==='code'),
+    serviceAction:()=>seen.some(e=>e.action==='choose'),
+    returnTarget:()=>seen.some(e=>e.action==='back'),
+    countDownRule:()=>{const increased=seen.findIndex(e=>e.action==='counter'&&e.detail?.delta>0);return increased>=0&&seen.slice(increased+1).some(e=>e.action==='counter'&&e.detail?.delta<0);}
   };
   previewInteracted=matches[test.key]?matches[test.key]():true;patchPreview();
 }
@@ -307,7 +327,7 @@ function patchPreview(){
   if(test.status==='locked'||state.paused||!['build','review'].includes(state.phase)||['finished','closed'].includes(state.status)){localProbe=null;delete $('#preview-actions').dataset.key;$('#preview-actions').innerHTML='<span>A próba most szünetel.</span>'+button('Vissza','back','secondary');return;}
   const key=JSON.stringify([localProbe?.passed,localProbe?.observed,previewInteracted,test.status,state.paused]);if($('#preview-actions').dataset.key===key)return;$('#preview-actions').dataset.key=key;
   if(localProbe)$('#preview-actions').innerHTML=`<div class="probe-result" role="status"><strong>${esc(localProbe.observed)}</strong><span>${esc(localProbe.hint||'')}</span></div><button type="button" class="button primary" data-confirm-test="${esc(test.id)}">${localProbe.passed?'Rögzítem: működik ✓':'Jelzem a fejlesztőnek →'}</button>`;
-  else $('#preview-actions').innerHTML=`<span class="test-instruction">${esc(test.hint||'Próbáld ki az oldalt!')}</span><button type="button" class="button primary" data-probe="${esc(test.id)}" ${previewInteracted||!['buttonTarget','formRule','navTarget','feedback','menuRule','counterRule','filterRule'].includes(test.key)?'':'disabled'}>Ellenőrzés</button>`;
+  else $('#preview-actions').innerHTML=`<span class="test-instruction">${esc(test.hint||'Próbáld ki az oldalt!')}</span><button type="button" class="button primary" data-probe="${esc(test.id)}" ${previewInteracted||!['buttonTarget','formRule','navTarget','feedback','menuRule','counterRule','filterRule','serviceAction','returnTarget','countDownRule'].includes(test.key)?'':'disabled'}>Ellenőrzés</button>`;
 }
 function closePreview(){previewOpen=false;localProbe=null;structuralKey='';taskSignature='';if(view==='host'){const id=modalTask;modalTask='';render();if(id)showTeacherTask(id);}else render();}
 function showTeacherTask(id){
@@ -335,10 +355,11 @@ app.addEventListener('click',e=>{
   if(b.dataset.task){showTeacherTask(b.dataset.task);return;}
   if(b.dataset.ownTask){activeTask=b.dataset.ownTask;expandedTask=true;taskSignature='';renderPlayer(true);return;}
   if(b.dataset.openTest){openPreview(b.dataset.openTest);return;}
-  if(b.dataset.save){clearTimeout(draftTimer);act(async()=>{const t=taskById(b.dataset.save),value=drafts[t.id]??t.value??t.options[0].value;const r=await api('task',{code,token,taskId:t.id,value});delete drafts[t.id];expandedTask=false;modalTask='';$('#task-modal')?.remove();receive(r);notify('Kint van! Ezt a részt te adtad hozzá.');if(view==='host'){followBuild=true;mountSite($('#shared-site'),false,sharedSiteAction,{view:siteViewFor(t.key),focusKey:t.key});syncBuildBrowser();}else openPreview('',t.key);});return;}
+  if(b.dataset.save){clearTimeout(draftTimer);act(async()=>{const t=taskById(b.dataset.save),value=drafts[t.id]??t.value??t.options[0].value;const r=await api('task',{code,token,taskId:t.id,value});delete drafts[t.id];expandedTask=false;modalTask='';$('#task-modal')?.remove();receive(r);notify('Kint van! Ezt a részt te adtad hozzá.');if(view==='host'){followBuild=true;mountSite($('#shared-site'),false,sharedSiteAction,{view:siteViewFor(t.key),focusKey:t.key});syncBuildBrowser();}});return;}
   if(b.dataset.probe){act(async()=>{const r=await api('probe',{code,token,taskId:b.dataset.probe});localProbe=r;if(r.state)state=r.state;patchPreview();});return;}
   if(b.dataset.confirmTest){act(async()=>{const r=await api('task',{code,token,taskId:b.dataset.confirmTest,value:localProbe.passed?'confirm':'report'});previewOpen=false;localProbe=null;modalTask='';expandedTask=false;structuralKey='';taskSignature='';receive(r);notify('A visszajelzésed megérkezett a csapathoz.');});return;}
   const action=b.dataset.action;if(!action)return;
+  if(action==='task-prev'||action==='task-next'){const list=myTasks(),index=list.findIndex(t=>t.id===activeTask),next=list[index+(action==='task-next'?1:-1)];if(next){activeTask=next.id;expandedTask=true;taskSignature='';renderPlayer(true);}return;}
   if(action==='follow-build'){followBuild=!followBuild;patchHost();return;}
   if(action==='close-person'){$('#person-modal')?.remove();return;}
   if(action==='resume-player'){const saved=playerSessions.get(code);if(saved)act(async()=>{code=saved.code;token=saved.token;resumePending=true;await connectSaved();});return;}

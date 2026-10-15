@@ -51,7 +51,7 @@ function boot({session = storage(), local = storage(), search = '', handler} = {
       addEventListener(type, fn) { (listeners[id + ':' + type] ||= []).push(fn); },
       querySelector() { return null; }, querySelectorAll() { return []; }, remove() {}, focus() {}};
   }
-  for (const id of ['app', 'context', 'notice', 'connection', 'help', 'full', 'join-code', 'join-name']) nodes.set(id, element(id));
+  for (const id of ['app', 'context', 'notice', 'connection', 'help', 'full', 'join-code', 'join-name', 'preview-actions']) nodes.set(id, element(id));
   const document = {
     hidden: false,
     querySelector(selector) {
@@ -98,6 +98,11 @@ function boot({session = storage(), local = storage(), search = '', handler} = {
     click(action) {
       assert.ok(nodes.get('app').innerHTML.includes('data-action="' + action + '"'), 'Action must be visible: ' + action);
       const button = {disabled: false, dataset: {action}};
+      for (const fn of listeners['app:click'] || []) fn({target: {closest: () => button}});
+    },
+    clickData(key, value) {
+      assert.ok(nodes.get('app').innerHTML.includes('data-' + key + '="' + value + '"'), 'Control must be visible: ' + key);
+      const button = {disabled: false, dataset: {[key.replace(/-([a-z])/g, (_, char) => char.toUpperCase())]: value}};
       for (const fn of listeners['app:click'] || []) fn({target: {closest: () => button}});
     },
     submit(code, name) {
@@ -296,4 +301,100 @@ test('choosing another player clears local choices and cancels a pending trial b
   assert.equal(app.run('lastLiveTest'), '');
   assert.equal(app.run('followBuild'), true);
   assert.match(app.html(), /id="join-form"/);
+});
+
+test('group start is enabled only for 3, 6 or 9 connected people and shows exact workloads', () => {
+  const app = boot();
+  for (let count = 0; count <= 10; count++) {
+    app.run(`state={status:'lobby',mode:'group',connectedCount:${count},players:Array(9).fill({connected:true}),allowedPlayerCounts:[3,6,9]};`);
+    const controls = app.run('hostControls()');
+    const start = controls.match(/<button[^>]*data-action="start"[^>]*>/)[0];
+    assert.equal(start.includes('disabled'), ![3, 6, 9].includes(count), `${count} connected participants`);
+    if ([3, 6, 9].includes(count)) {
+      const workload = {3: 9, 6: 6, 9: 3}[count];
+      assert.match(app.run('lobbyPlan()'), new RegExp(`${workload} feladat fejenként · ${count * workload} közösen`));
+      assert.equal((app.run('lobbyPlan()').match(new RegExp(`<b>${count / 3}</b>`, 'g')) || []).length, 3);
+    }
+  }
+  app.run("state={status:'lobby',mode:'demo',connectedCount:0,players:[]};");
+  assert.doesNotMatch(app.run('hostControls()'), /disabled/);
+});
+
+test('lobby uses server allowed counts and connected count, not stale names in roster', () => {
+  const app = boot();
+  app.run("state={status:'lobby',mode:'group',connectedCount:3,players:Array(6).fill({}),allowedPlayerCounts:[6,9]};");
+  assert.match(app.run('hostControls()'), /data-action="start" disabled/);
+  assert.match(app.run('hostControls()'), /Még 3 kapcsolódó kell/);
+  app.run('delete state.allowedPlayerCounts;');
+  assert.doesNotMatch(app.run('hostControls()'), /disabled/);
+});
+
+test('unassigned lobby participants do not appear to have a role or finished task', () => {
+  const app = boot();
+  app.run("state={status:'lobby',mode:'group',connectedCount:4,players:[]};");
+  const row = app.run("personItem({id:'waiting',name:'Anna',role:'designer',roleLabel:'Tervező',total:0,done:0})");
+  assert.match(row, /Beosztásra vár/);
+  assert.doesNotMatch(row, /Tervező|✓/);
+  assert.match(row, /<span class="status">—<\/span>/);
+});
+
+function ownedTasks(count = 9, kind = 'test') {
+  return Array.from({length: count}, (_, index) => ({id: 'task-' + index, key: 'key-' + index,
+    kind, role: kind === 'test' ? 'tester' : 'designer', title: 'Feladat ' + (index + 1),
+    status: 'ready', hint: 'Próbáld ki!', options: [{value: 'yes', label: 'Kipróbálom'}]}));
+}
+
+test('nine personal tasks use three navigation controls and show the completed count', () => {
+  const app = boot();
+  const tasks = ownedTasks();
+  tasks[0].status = 'done';
+  app.run(`view='player';state=${JSON.stringify(playerState({status:'working',phase:'build',tasks,
+    self:{id:'player-one',name:'Anna',role:'tester',taskIds:tasks.map(t=>t.id)}}))};renderPlayer(true);`);
+  assert.match(app.html(), /2 \/ 9/);
+  assert.match(app.html(), /1 kész/);
+  assert.match(app.html(), /Tesztelő · 1\/9 kész/);
+  assert.doesNotMatch(app.html(), /data-own-task=/);
+  const nav = app.html().match(/<nav class="player-task-nav"[\s\S]*?<\/nav>/)[0];
+  assert.equal((nav.match(/<button/g) || []).length, 3, 'The full nine-task list must not overflow the phone');
+  app.click('task-next');
+  assert.match(app.html(), /3 \/ 9/);
+  app.click('task-prev');
+  assert.match(app.html(), /2 \/ 9/);
+  app.click('task-prev');
+  assert.match(app.html(), /1 \/ 9/);
+  assert.match(app.html(), /data-action="task-prev"[^>]*disabled/);
+});
+
+test('publishing a contribution advances directly to the next ready personal task', async () => {
+  const tasks = ownedTasks(9, 'choice');
+  const before = playerState({status:'working',phase:'build',tasks,
+    self:{id:'player-one',name:'Anna',role:'designer',taskIds:tasks.map(t=>t.id)}});
+  const after = structuredClone(before);
+  after.tasks[0].status = 'done';after.tasks[0].value = 'yes';after.project.revision = 1;
+  const app = boot({handler: item => {
+    assert.equal(item.path, '/api/task');
+    assert.equal(item.body.taskId, 'task-0');
+    return response(after);
+  }});
+  app.run(`view='player';state=${JSON.stringify(before)};renderPlayer(true);`);
+  app.clickData('save', 'task-0');
+  await settle();
+  assert.match(app.html(), /2 \/ 9/);
+  assert.match(app.html(), /data-save="task-1"/);
+  assert.equal(app.run('previewOpen'), false, 'Publication must not add a compulsory preview detour');
+});
+
+test('new functional tests require their own visible interaction before checking', () => {
+  const app = boot();
+  const begin = key => app.run(`state={phase:'build',paused:false,tasks:[{id:'test',key:'${key}',status:'ready'}],project:{revision:0,config:{}}};previewOpen={testId:'test',revision:0,seen:[]};previewInteracted=false;localProbe=null;`);
+  const event = value => app.run(`recordPreviewAction(${JSON.stringify(value)});previewInteracted`);
+  begin('serviceAction');
+  assert.equal(event({action:'program'}), false, 'Merely opening a service card is not the booking button test');
+  assert.equal(event({action:'choose'}), true);
+  begin('returnTarget');
+  assert.equal(event({action:'nav'}), false);
+  assert.equal(event({action:'back'}), true);
+  begin('countDownRule');
+  assert.equal(event({action:'counter',detail:{delta:1}}), false);
+  assert.equal(event({action:'counter',detail:{delta:-1}}), true, 'Increase, then return to one; the minus may now correctly be disabled');
 });

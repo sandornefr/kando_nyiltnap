@@ -9,7 +9,7 @@
     buttonLabel:{try:'Időpontot kérek',join:'Időpontkérés',discover:'Kérek egy időpontot'},
     footerText:{community:'Szeretettel várunk a Tücsökben.',future:'Bejelentkezés előzetes egyeztetéssel.',welcome:'Bejelentkezés alapján'}
   };
-  const defaults={theme:'violet',title:'discover',intro:'curious',hero:'code',cardCode:'create',cardNetwork:'connect',buttonLabel:'try',layout:'cards',buttonTarget:'signup',formRule:'nonempty',navTarget:'programs',feedback:'visible',menuRule:'toggle',counterRule:'one',filterRule:'match',headingSize:'large',borderStyle:'soft',footerText:'community'};
+  const defaults={theme:'violet',title:'discover',intro:'curious',hero:'code',cardCode:'create',cardNetwork:'connect',buttonLabel:'try',layout:'cards',buttonTarget:'signup',formRule:'nonempty',navTarget:'programs',feedback:'visible',menuRule:'toggle',counterRule:'one',filterRule:'match',headingSize:'large',borderStyle:'soft',footerText:'community',fontPair:'serif',heroPlacement:'right',buttonShape:'soft',serviceAction:'signup',returnTarget:'home',countDownRule:'floor'};
   const palettes={violet:{accent:'#6e5470',soft:'#f0eaf0'},mint:{accent:'#42634b',soft:'#eaf0e8'},amber:{accent:'#a55231',soft:'#f6ebe4'}};
   const business={name:'Tücsök Kutyakozmetika',address:'1172 Budapest, Újlak u. 17–21.',phone:'+36 20 425 5441',hours:'Bejelentkezés alapján',source:'https://www.facebook.com/tucsokkutyakozmetika/about'};
   const photos={code:{src:'assets/grooming.jpg',alt:'Kutya szőrének ápolása – stockfotó, illusztráció'},network:{src:'assets/bath.jpg',alt:'Kutyafürdetés – stockfotó, illusztráció'},team:{src:'assets/dog.jpg',alt:'Ápolt kutya portréja – stockfotó, illusztráció'}};
@@ -23,7 +23,8 @@
   const buildOf=options=>Array.isArray(options?.builtKeys)?new Set(options.builtKeys):null;
   const built=(build,key)=>build===null||build.has(key);
   const anyBuilt=(build,...keys)=>keys.some(key=>built(build,key));
-  const viewForKey=key=>['cardCode','cardNetwork','layout','filterRule'].includes(key)?'programs':['formRule','feedback','counterRule'].includes(key)?'signup':'home';
+  const viewForKey=key=>['cardCode','cardNetwork','layout','filterRule','serviceAction','returnTarget'].includes(key)?'programs':['formRule','feedback','counterRule','countDownRule'].includes(key)?'signup':'home';
+  const countFloor=(c,build)=>built(build,'countDownRule')&&c.countDownRule==='unbounded'?0:1;
   const emptyPage=()=>'<div class="ks-empty" role="status"><span>Ez az oldal még üres.</span></div>';
   const arrow='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
   // These same helpers supply the source shown in the lesson's final explanation.
@@ -174,6 +175,7 @@
   .ks-site.ks-building.ks-theme-amber{--ks-accent:#a55231;--ks-accent-soft:#f6ebe4;background:#f7f4ed}
   .ks-site.ks-building.ks-rounded{--ks-radius:10px}
   .ks-site .ks-empty{display:grid;place-content:center;flex:1;min-width:0;min-height:0;text-align:center;color:#777d78;font-size:16px;padding:16px;line-height:1.4}
+  .ks-site:not(.ks-theme-pending) .ks-empty{background:var(--ks-accent-soft);color:var(--ks-accent);border-top:6px solid var(--ks-accent)}
   .ks-site .ks-header:empty,.ks-site .ks-footer:empty{display:none}
   .ks-site .ks-brand-pending{color:#747a73;font-size:14px;letter-spacing:.03em}
   .ks-site .ks-services-pending{display:flex;align-items:center;justify-content:center;min-height:68px;border:1px dashed #c7cdc7;color:#737c72;font-size:16px}
@@ -259,6 +261,18 @@
     .ks-site .ks-mini-programs[data-count="1"]{grid-template-rows:minmax(0,1fr);height:min(190px,45cqh);align-self:center}
     .ks-site .ks-home.ks-no-hero .ks-mini-programs{height:100%;align-self:stretch}
   }
+  .ks-site.ks-font-serif :is(.ks-title,.ks-brand-name,.ks-page-top h3,.ks-program-card h4){font-family:Georgia,'Times New Roman',serif}
+  .ks-site.ks-font-sans :is(.ks-title,.ks-brand-name,.ks-page-top h3,.ks-program-card h4){font-family:Arial,'Segoe UI',sans-serif;letter-spacing:0}
+  .ks-site.ks-button-soft :is(.ks-primary,.ks-program-card button){border-radius:22px}
+  .ks-site.ks-button-square :is(.ks-primary,.ks-program-card button){border-radius:0}
+  .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only){grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr)}
+  .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-media{grid-column:1}
+  .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-copy{grid-column:2}
+  @container ks-site (max-width:499px) and (min-height:450px){
+    .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only){grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(55px,1fr)}
+    .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-media{grid-column:1;grid-row:2}
+    .ks-site.ks-photo-left .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-copy{grid-column:1;grid-row:1}
+  }
   @media (prefers-reduced-motion:reduce){.ks-site *{transition:none;animation:none;scroll-behavior:auto}.ks-site .ks-just-built{outline:2px solid #5e9b72;outline-offset:2px}}
   `;
   function installStyle(){
@@ -280,7 +294,7 @@
     if(!hasHero&&!hasServices)return emptyPage();
     return `<section class="ks-home ${hasHero?'':'ks-no-hero'} ${hasServices?'':'ks-no-services'}" aria-label="Tücsök Kutyakozmetika">${hasHero?`<div class="ks-hero ${hasPhoto?'':'ks-no-photo'} ${hasCopy?'':'ks-photo-only'}">${hasPhoto?`<div class="ks-hero-media" data-built="hero">${photo(c.hero,'ks-hero-image')}</div>`:''}${hasCopy?`<div class="ks-hero-copy">${built(build,'title')?`<h2 class="ks-title" data-built="title headingSize">${text(c,'title')}</h2>`:''}${built(build,'intro')?`<p class="ks-intro" data-built="intro">${text(c,'intro')}</p>`:''}${anyBuilt(build,'buttonLabel','buttonTarget')?`<div class="ks-hero-actions" data-built="buttonLabel buttonTarget">${mainButton(built(build,'buttonLabel')?c:{...c,buttonLabel:'join'})}</div>`:''}</div>`:''}${hasPhoto?'<span class="ks-photo-credit">Illusztráció</span>':''}</div>`:''}${hasServices?`<div class="ks-mini-programs" data-built="layout" data-count="${services.length}">${services.length?services.map(kind=>mini(c,kind)).join(''):'<div class="ks-services-pending">Ide kerülnek a szolgáltatások.</div>'}</div>`:''}</section>`;
   }
-  function top(title,sub,action='home',booking=false){return `<div class="ks-page-top ${booking?'ks-booking-head':''}"><button type="button" class="ks-back" data-action="${action}" aria-label="${action==='calendar'?'Vissza az időpontokhoz':'Vissza a kezdőlapra'}">${arrow}</button><div><h3 tabindex="-1">${title}</h3>${sub?`<p>${sub}</p>`:''}</div></div>`;}
+  function top(title,sub,action='home',booking=false){return `<div class="ks-page-top ${booking?'ks-booking-head':''}"><button type="button" class="ks-back" data-built="returnTarget" data-action="${action==='home'?'return':action}" aria-label="${action==='calendar'?'Vissza az időpontokhoz':'Vissza a kezdőlapra'}">${arrow}</button><div><h3 tabindex="-1">${title}</h3>${sub?`<p>${sub}</p>`:''}</div></div>`;}
   function programs(c,state,build=null){
     const available=kind=>built(build,kind==='code'?'cardCode':'cardNetwork');
     const show=kind=>available(kind)&&(!built(build,'filterRule')||c.filterRule!=='match'||state.filter==='all'||state.filter===kind);
@@ -308,13 +322,13 @@
     if(state.success&&built(build,'feedback')&&c.feedback==='visible')return `<section class="ks-page" aria-label="Sikeres próba"><div class="ks-success" role="status"><span class="ks-success-icon" aria-hidden="true">✓</span><h3>A próbafoglalás sikerült</h3><p><strong>${safe(state.name||'Buksi')}</strong> · ${state.count} kutya<br>${safe(state.days[state.selectedSlot.dayIndex].label)} · ${state.selectedSlot.time}</p><small>Bemutató foglaló.<br>Valódi időpontot nem rögzítettünk.</small><div class="ks-success-actions"><button type="button" class="ks-primary" data-action="calendar">Megnézem a naptárt</button><button type="button" data-action="home">Kezdőlap</button></div></div></section>`;
     if(state.bookingStep!=='form'||!state.selectedSlot)return calendar(c,state);
     const selected=state.selectedSlot,day=state.days[selected.dayIndex];
-    return `<section class="ks-page ks-booking-page" aria-label="Időpontkérés">${top('Időpont: '+selected.time,safe(day.label)+' · '+safe(day.weekday),'calendar',true)}<div class="ks-form-layout"><aside class="ks-form-aside">${photo(state.program==='code'?'network':'team','')}<h4>${state.program==='code'?'Fürdetés':state.program==='network'?'Teljes kozmetika':'A kutyád adatai'}</h4><p>A próbához kitalált kutyanevet használj.</p></aside><form class="ks-form" novalidate><div><label class="ks-field-label" for="${state.inputId}">Kitalált kutyanév</label><input class="ks-name" id="${state.inputId}" name="demo-name" type="text" inputmode="text" autocomplete="off" maxlength="40" placeholder="Pl. Buksi" value="${safe(state.name)}" aria-invalid="${Boolean(state.error)}" aria-describedby="${state.inputId}-note ${state.inputId}-status"></div><p class="ks-local-note" id="${state.inputId}-note">Bemutató. Valódi időpontot nem rögzítünk.</p>${built(build,'counterRule')?`<div class="ks-count-row" data-built="counterRule"><span class="ks-count-label">Kutyák száma</span><div class="ks-stepper" role="group" aria-label="Kutyák száma"><button type="button" data-action="minus" aria-label="Eggyel kevesebb kutya" ${state.count<=1?'disabled':''}>−</button><output aria-live="polite" aria-label="Kutyák száma">${state.count}</output><button type="button" data-action="plus" aria-label="Eggyel több kutya" ${state.count>=20?'disabled':''}>+</button></div></div>`:''}<button type="submit" class="ks-primary">Próbafoglalás ${arrow}</button><p class="ks-status" id="${state.inputId}-status" role="status" ${c.feedback==='hidden'?'hidden':''}>${state.error?'Írj be egy kutyanevet.':''}</p></form></div></section>`;
+    return `<section class="ks-page ks-booking-page" aria-label="Időpontkérés">${top('Időpont: '+selected.time,safe(day.label)+' · '+safe(day.weekday),'calendar',true)}<div class="ks-form-layout"><aside class="ks-form-aside">${photo(state.program==='code'?'network':'team','')}<h4>${state.program==='code'?'Fürdetés':state.program==='network'?'Teljes kozmetika':'A kutyád adatai'}</h4><p>A próbához kitalált kutyanevet használj.</p></aside><form class="ks-form" novalidate><div><label class="ks-field-label" for="${state.inputId}">Kitalált kutyanév</label><input class="ks-name" id="${state.inputId}" name="demo-name" type="text" inputmode="text" autocomplete="off" maxlength="40" placeholder="Pl. Buksi" value="${safe(state.name)}" aria-invalid="${Boolean(state.error)}" aria-describedby="${state.inputId}-note ${state.inputId}-status"></div><p class="ks-local-note" id="${state.inputId}-note">Bemutató. Valódi időpontot nem rögzítünk.</p>${built(build,'counterRule')?`<div class="ks-count-row" data-built="counterRule countDownRule"><span class="ks-count-label">Kutyák száma</span><div class="ks-stepper" role="group" aria-label="Kutyák száma"><button type="button" data-action="minus" aria-label="Eggyel kevesebb kutya" ${state.count<=countFloor(c,build)?'disabled':''}>−</button><output aria-live="polite" aria-label="Kutyák száma">${state.count}</output><button type="button" data-action="plus" aria-label="Eggyel több kutya" ${state.count>=20?'disabled':''}>+</button></div></div>`:''}<button type="submit" class="ks-primary">Próbafoglalás ${arrow}</button><p class="ks-status" id="${state.inputId}-status" role="status" ${c.feedback==='hidden'?'hidden':''}>${state.error?'Írj be egy kutyanevet.':''}</p></form></div></section>`;
   }
   function contact(){return `<section class="ks-page ks-contact-page" aria-label="Kapcsolat">${top('Kapcsolat','Tücsök Kutyakozmetika')}<div class="ks-contact-content"><div class="ks-contact-block"><h4>Cím</h4><p>${business.address}</p></div><div class="ks-contact-block"><h4>Telefon</h4><a href="tel:+36204255441">${business.phone}</a></div><div class="ks-contact-block"><h4>Nyitvatartás</h4><p>${business.hours}</p></div><div class="ks-contact-block"><h4>Időpontegyeztetés</h4><p class="ks-contact-small">Valódi időpontot a szalonnal telefonon egyeztess.</p></div></div><p class="ks-contact-source">Üzleti adatok: <a href="${business.source}" target="_blank" rel="noopener noreferrer">a szalon hivatalos Facebook-oldala</a>.</p></section>`;}
   function credits(){return `<section class="ks-page" aria-label="A fotókról">${top('A fotókról','')}<div class="ks-credits"><p>A képek <strong>stockfotók, illusztrációk</strong>. Nem a Tücsök Kutyakozmetika helyszínét vagy saját vendégeit mutatják.</p><p>Tima Miroshnichenko: <a href="https://www.pexels.com/photo/person-grooming-hair-of-yorkshire-terrier-6131569/" target="_blank" rel="noopener noreferrer">ápolás</a> · <a href="https://www.pexels.com/photo/close-up-photo-of-bathing-of-dog-6131165/" target="_blank" rel="noopener noreferrer">fürdetés</a>.<br>Goochie Poochie Grooming: <a href="https://www.pexels.com/photo/studio-shot-of-dog-with-red-bandana-3361723/" target="_blank" rel="noopener noreferrer">kutyaportré</a>.</p><p>Pexels · <a href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">felhasználási engedély</a>.</p></div></section>`;}
   let serial=0;
   function siteClasses(c,options,build){
-    return `ks-site ${build===null?'':'ks-building'} ${built(build,'theme')?'ks-theme-'+themeOf(c):'ks-theme-pending'} ks-layout-${built(build,'layout')&&c.layout==='split'?'split':'cards'} ks-heading-${built(build,'headingSize')?(c.headingSize==='normal'?'normal':'large'):'pending'} ${built(build,'borderStyle')?(c.borderStyle==='square'?'ks-square':'ks-rounded'):''} ${options.compact?'ks-compact':''}`;
+    return `ks-site ${build===null?'':'ks-building'} ${built(build,'theme')?'ks-theme-'+themeOf(c):'ks-theme-pending'} ks-layout-${built(build,'layout')&&c.layout==='split'?'split':'cards'} ks-heading-${built(build,'headingSize')?(c.headingSize==='normal'?'normal':'large'):'pending'} ${built(build,'borderStyle')?(c.borderStyle==='square'?'ks-square':'ks-rounded'):''} ${built(build,'fontPair')?'ks-font-'+(c.fontPair==='sans'?'sans':'serif'):''} ${built(build,'heroPlacement')&&c.heroPlacement==='left'?'ks-photo-left':''} ${built(build,'buttonShape')?'ks-button-'+(c.buttonShape==='square'?'square':'soft'):''} ${options.compact?'ks-compact':''}`;
   }
   function header(c,build){
     const brand=built(build,'title')?'<a class="ks-brand" href="#home" data-route="home" aria-label="Tücsök Kutyakozmetika, kezdőlap"><span class="ks-brand-name">Tücsök</span><span class="ks-brand-description">kutyakozmetika</span></a>':'';
@@ -360,7 +374,7 @@
     function highlight(key){
       clearTimeout(highlightTimer);site.querySelectorAll('.ks-just-built').forEach(node=>node.classList.remove('ks-just-built'));
       if(!key)return;const nodes=Array.from(site.querySelectorAll('[data-built]')).filter(node=>node.dataset.built.split(' ').includes(key));
-      if(['theme','borderStyle','formRule','feedback','counterRule'].includes(key))nodes.push(stage);
+      if(['theme','borderStyle','formRule','feedback','counterRule','fontPair','heroPlacement','buttonShape','serviceAction','countDownRule'].includes(key))nodes.push(stage);
       nodes.forEach(node=>node.classList.add('ks-just-built'));highlightTimer=setTimeout(()=>nodes.forEach(node=>node.classList.remove('ks-just-built')),2100);
     }
     function click(event){
@@ -370,13 +384,20 @@
       if(action==='menu'){state.menu=c.menuRule==='open'?true:!state.menu;menu();emit('menu',state.menu?'open':'closed');}
       else if(action==='hero'){if(!built(build,'buttonTarget')){notice('A gomb már kész. A célját még be kell kötni.');emit('cta','unbound');}else emit('cta',routeMainButton(c.buttonTarget,go));}
       else if(action==='home'){go('home');emit('back','home');}
+      else if(action==='return'){
+        if(settings.plannedKeys?.includes('returnTarget')&&!built(build,'returnTarget')){notice('A vissza gomb útvonala még készül.');emit('back','unbound');return;}
+        go(built(build,'returnTarget')&&c.returnTarget==='programs'?'programs':'home');emit('back',state.view);
+      }
       else if(action==='program'){state.filter=control.dataset.program;go('programs');emit('program',state.filter);}
-      else if(action==='choose'){state.program=control.dataset.program;go('signup');emit('choose',state.program);}
+      else if(action==='choose'){
+        if(settings.plannedKeys?.includes('serviceAction')&&!built(build,'serviceAction')){notice('A kezelés időpontgombját még be kell kötni.');emit('choose','unbound');return;}
+        state.program=control.dataset.program;go(built(build,'serviceAction')&&c.serviceAction==='home'?'home':'signup');emit('choose',state.view);
+      }
       else if(action==='day-prev'||action==='day-next'){state.dayIndex=Math.max(0,Math.min(state.days.length-1,state.dayIndex+(action==='day-next'?1:-1)));state.selectedSlot=null;render();stage.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});}
       else if(action==='slot'){const index=Number(control.dataset.slot);if(!Number.isInteger(index)||index<0||index>=demoTimes.length)return;const slot=demoSlot(state,index);if(slot.name)return;state.selectedSlot={dayIndex:state.dayIndex,time:slot.time,key:slot.key};state.bookingStep='form';state.error=false;state.success=false;render(true);}
       else if(action==='calendar'){state.view='signup';state.bookingStep='calendar';state.selectedSlot=null;state.success=false;state.error=false;render(true);}
       else if(action==='filter'){state.filter=control.dataset.filter;render();stage.querySelector(`[data-filter="${state.filter}"]`)?.focus({preventScroll:true});emit('filter',c.filterRule==='match'?state.filter:'all',{selected:state.filter});}
-      else if(action==='plus'||action==='minus'){const step=c.counterRule==='two'?2:1,before=state.count;state.count=Math.max(1,Math.min(20,state.count+(action==='plus'?step:-step)));render();stage.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});emit('counter',state.count,{delta:state.count-before,direction:action});}
+      else if(action==='plus'||action==='minus'){const step=c.counterRule==='two'?2:1,before=state.count;state.count=Math.max(countFloor(c,build),Math.min(20,state.count+(action==='plus'?step:-1)));render();stage.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});emit('counter',state.count,{delta:state.count-before,direction:action});}
     }
     function input(event){if(event.target.matches('.ks-name')){state.name=event.target.value;if(state.error){state.error=false;event.target.setAttribute('aria-invalid','false');stage.querySelector('.ks-status').textContent='';}}}
     function submit(event){if(!event.target.matches('.ks-form')||!state.selectedSlot)return;event.preventDefault();state.name=event.target.querySelector('.ks-name').value.trim();state.error=c.formRule!=='always'&&!state.name;state.success=!state.error;if(state.success)state.reservations[state.selectedSlot.key]=state.name||'Buksi';render();if(state.error)stage.querySelector('.ks-name')?.focus({preventScroll:true});emit('submit',state.error?'empty':!built(build,'feedback')||c.feedback==='hidden'?'success-hidden':'success',{empty:!state.name});}
@@ -386,6 +407,7 @@
     cleanup.update=(nextConfig,nextOptions={})=>{
       if(disposed)return;
       const before=c,previousBuild=build;c=configOf(nextConfig);settings={...settings,...nextOptions};build=buildOf(settings);
+      state.count=Math.max(countFloor(c,build),state.count);
       if(nextOptions.view&&nextOptions.view!==state.view)go(nextOptions.view);else render();
       const added=build?Array.from(build).filter(key=>previousBuild!==null&&!previousBuild.has(key)):[];
       const changed=Object.keys(c).filter(key=>c[key]!==before[key]&&built(build,key));

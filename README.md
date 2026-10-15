@@ -19,11 +19,19 @@ A négy projektszakasz automatikusan vált. A tanár bármikor szüneteltethet m
 
 ## Létszám és szerepek
 
-**Közös projekt: 4–35 fő.** A tervező, fejlesztő és tesztelő szerepet a rendszer osztja ki. Egy ember legfeljebb két feladatért felel. Négy főnél hat, 35 főnél 36 részfeladat van. A későn csatlakozó is kap feladatot, de a már befejezett munkát nem veszi el mástól.
+**Közös projekt: kizárólag 3, 6 vagy 9 fő.** A rendszer egyenlően osztja ki a három szerepet. Az indítógomb csak megfelelő számú, valóban kapcsolódó résztvevőnél aktív.
+
+| Résztvevők | Tervező | Fejlesztő | Tesztelő | Feladat fejenként | Összes feladat |
+| --- | --- | --- | --- | --- | --- |
+| 3 fő | 1 | 1 | 1 | 9 | 27 |
+| 6 fő | 2 | 2 | 2 | 6 | 36 |
+| 9 fő | 3 | 3 | 3 | 3 | 27 |
+
+A váróterem előre megmutatja a szerepek és feladatok számát. Indulás után új résztvevő már nem csatlakozhat; a meglévő játékos ugyanazzal a mentett belépéssel továbbra is visszatérhet. A kiosztás nem változik meg átmeneti kapcsolatkimaradáskor.
 
 **Vezetett bemutató: egyedül is.** A tanári kezdőlapon a „Kipróbálom egyedül” gombot válaszd. Nem kell hozzá másik telefon vagy résztvevő. Mind a 36 feladat elérhető: az üres oldaltól a képeken, szolgáltatásokon és foglalón át a kipróbálásig. A vezetés mindig a következő elvégezhető feladatot kínálja. Nincs visszaszámlálás és automatikus továbblépés, a tanár a saját tempójában halad. Hibás működés jelzése után a vezetés a javításhoz, majd az újabb próbához visz. A teljes feladatlista is elérhető. Legfeljebb három résztvevő ebben a módban is csatlakozhat, de nem szükséges. Ez a B terv akkor is működik, ha senki sem csatlakozik.
 
-Az **Útmutató** gomb három rövid, lapozható képernyőn mutatja meg a tanár, a diákok és a kivetítő szerepét. A csoportos munka alatt a „Most te” sáv jelzi a tanári teendőt; az oldalsáv jelzi, hogy a diákok a telefonjukon dolgoznak. A csoportot legalább négy csatlakozóval lehet indítani.
+Az **Útmutató** gomb három rövid, lapozható képernyőn mutatja meg a tanár, a diákok és a kivetítő szerepét. A csoportos munka alatt a „Most te” sáv jelzi a tanári teendőt; az oldalsáv jelzi, hogy a diákok a telefonjukon dolgoznak. A csoportot pontosan 3, 6 vagy 9 kapcsolódó résztvevővel lehet indítani.
 
 A tervezési választások mind érvényesek. A működésbeli hibát a tesztelő a közös oldal kipróbálásával fedezheti fel, és rövid segítséget küldhet vissza a felelősnek. A javítás után új ellenőrzés szükséges. A próbaűrlap csak a böngészőben működik: nem valódi időpontkérés, az oda írt adatot nem küldi el és nem menti.
 
@@ -49,11 +57,11 @@ A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja
 
 ## Telefon, iPad és kivetítő
 
-A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A telefonos rendszerbillentyűzet átmenetileg csökkentheti a hasznos magasságot; az űrlap kitöltése után zárd be.
+A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. A diák saját feladatait az előző/következő nyíllal lapozza; a számláló mutatja, hol tart és mennyi készült el. Mentés vagy tesztvisszajelzés után a következő elvégezhető feladat jelenik meg, kilenc külön navigációs gomb helyett is görgetés nélkül. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A telefonos rendszerbillentyűzet átmenetileg csökkentheti a hasznos magasságot; az űrlap kitöltése után zárd be.
 
 A játékos belépése ugyanazon az eszközön és böngészőben lapbezárás után is megmarad, legfeljebb 24 óráig. Újranyitáskor ugyanaz a név, szerep és mentett munka tér vissza. A „Kilépek a csoportból” gomb jelzi a távozást a tanárnak, utána a „Folytatom a játékom” gombbal vissza lehet lépni. Másik csoport kódja nem keveri össze a belépéseket. A tanári jogosultság továbbra is csak az adott böngészőlapon tárolódik.
 
-A **Csapat → Kezelés → Eltávolítom a csoportból** gomb felszabadítja az eltávozott résztvevő helyét és becenevét. Folyamatban lévő játéknál a feladatait a tanár veszi át; az elkészült oldal és feladatállapot megmarad. A korábbi belépése visszavonódik. A „Nincs kapcsolat” jelzés kb. 30 másodperc kimaradás után jelenik meg, önmagában nem töröl senkit. A kezdéshez négy valóban kapcsolódó játékos kell. Másik eszközön, törölt böngészőadatokkal vagy már elveszett régi belépésnél a tanár felszabadíthatja a nevet; pusztán a becenév beírása nem veheti át más játékát.
+A **Csapat → Kezelés → Eltávolítom a csoportból** gomb felszabadítja az eltávozott résztvevő helyét és becenevét. Folyamatban lévő játéknál a feladatait a tanár veszi át; az elkészült oldal és feladatállapot megmarad. A korábbi belépése visszavonódik. A „Nincs kapcsolat” jelzés kb. 30 másodperc kimaradás után jelenik meg, önmagában nem töröl senkit. A kezdéshez pontosan 3, 6 vagy 9 valóban kapcsolódó játékos kell. Másik eszközön, törölt böngészőadatokkal vagy már elveszett régi belépésnél a tanár felszabadíthatja a nevet; pusztán a becenév beírása nem veheti át más játékát.
 
 A szüneteltetést a tanár kezeli; az internetkapcsolat átmeneti megszakadása nem törli a szerveren mentett munkát. A tényleges rendezvény előtt a helyszíni Wi-Fi-n és a használt iPadeken is érdemes főpróbát tartani.
 

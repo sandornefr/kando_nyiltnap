@@ -131,3 +131,60 @@ test('legacy callers continue to receive the complete example',()=>{
   assert.match(html,/ks-theme-violet/);
   assert.doesNotMatch(html,/ks-building/);
 });
+
+test('six-person service and back routes wait for their own developer then show both alternatives',()=>{
+  const api=loadSite(),plannedKeys=['cardCode','layout','serviceAction','returnTarget'];
+  const ui=mounted(api,{}, {builtKeys:['cardCode','layout'],plannedKeys,view:'programs'});
+  ui.click({action:'choose',program:'code'});
+  assert.equal(ui.controller.getView(),'programs');
+  assert.equal(ui.events.at(-1).result,'unbound');
+  ui.click({action:'return'});
+  assert.equal(ui.events.at(-1).result,'unbound');
+  ui.controller.update({serviceAction:'home',returnTarget:'programs'},{builtKeys:plannedKeys});
+  ui.click({action:'choose',program:'code'});
+  assert.equal(ui.controller.getView(),'home');
+  ui.click({action:'return'});
+  assert.equal(ui.controller.getView(),'programs');
+  ui.controller.update({serviceAction:'signup',returnTarget:'home'},{builtKeys:plannedKeys});
+  ui.click({action:'choose',program:'code'});
+  assert.equal(ui.controller.getView(),'signup');
+  assert.match(ui.parts['.ks-stage'].innerHTML,/Ez az oldal még üres/);
+  ui.click({action:'return'});
+  assert.equal(ui.controller.getView(),'home');
+});
+
+test('groups without extra routing tasks retain usable service and back buttons',()=>{
+  const api=loadSite(),ui=mounted(api,{}, {builtKeys:['cardCode'],plannedKeys:['cardCode'],view:'programs'});
+  ui.click({action:'choose',program:'code'});
+  assert.equal(ui.controller.getView(),'signup');
+  ui.click({action:'return'});
+  assert.equal(ui.controller.getView(),'home');
+});
+
+test('lower-bound repair prevents zero dogs and preserves other form state',()=>{
+  const api=loadSite(),builtKeys=['formRule','counterRule','countDownRule'];
+  const ui=mounted(api,{countDownRule:'unbounded'},{builtKeys,view:'signup'});
+  ui.click({action:'slot',slot:'1'});
+  ui.inputName('Buksi');
+  ui.click({action:'minus'});
+  assert.equal(ui.events.at(-1).result,0);
+  assert.match(ui.parts['.ks-stage'].innerHTML,/aria-label="Kutyák száma">0</);
+  ui.controller.update({countDownRule:'floor'},{builtKeys});
+  assert.match(ui.parts['.ks-stage'].innerHTML,/aria-label="Kutyák száma">1</);
+  assert.match(ui.parts['.ks-stage'].innerHTML,/aria-label="Eggyel kevesebb kutya" disabled/);
+  assert.match(ui.parts['.ks-stage'].innerHTML,/value="Buksi"/);
+  ui.click({action:'plus'});
+  ui.click({action:'minus'});
+  assert.equal(ui.events.at(-1).result,1);
+  assert.equal(ui.events.at(-1).detail.delta,-1);
+});
+
+test('additional visual choices remain unpublished until their task is applied',()=>{
+  const api=loadSite(),config={fontPair:'sans',heroPlacement:'left',buttonShape:'square'};
+  const before=api.html(config,{builtKeys:['title','hero','buttonLabel']});
+  assert.doesNotMatch(before,/ks-font-sans|ks-photo-left|ks-button-square/);
+  const after=api.html(config,{builtKeys:['title','hero','buttonLabel','fontPair','heroPlacement','buttonShape']});
+  assert.match(after,/ks-font-sans/);
+  assert.match(after,/ks-photo-left/);
+  assert.match(after,/ks-button-square/);
+});
