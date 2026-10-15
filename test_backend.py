@@ -325,7 +325,7 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual(204, self.client.options('/api/task', headers={'Origin': 'https://sandornefr.github.io'}).status_code)
         for secret in ('server.py', 'project.py', 'requirements.txt', '.env', 'games.sqlite3'):
             self.assertEqual(404, self.client.get('/' + secret).status_code)
-        self.assertEqual('kodlabor-1', self.client.get('/health').get_json()['version'])
+        self.assertEqual('kodlabor-2', self.client.get('/health').get_json()['version'])
 
     def test_idempotent_create_join_control(self):
         data = dict(admin=self.admin, mode='group', requestId='create-once-123')
