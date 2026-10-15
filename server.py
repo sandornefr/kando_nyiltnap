@@ -55,6 +55,12 @@ def load(code):
     if room.get('created', 0) < time.time() - TTL:
         return None
     if room.get('schema') == 2:
+        # Copy changes also reach active rooms without resetting any task progress.
+        catalogue = {task['id']: task for task in CATALOGUE}
+        for task in room['tasks']:
+            current = catalogue.get(task['id'])
+            if current:
+                task.update({key: current[key] for key in ('title', 'hint', 'options')})
         update(room)
     return room
 
@@ -84,14 +90,14 @@ def advance(room, at):
     else:
         phase = PHASES[index + 1]
         room['phase'] = phase['id']
-        room['deadline'] = at + phase['duration']
+        room['deadline'] = at + phase['duration'] if room['mode'] != 'demo' else 0
         event(room, 'Új szakasz: ' + phase['label'] + '.')
 
 
 def update(room):
     changed = False
     now = time.time()
-    while room['status'] == 'working' and room['pause'] is None and now >= room['deadline']:
+    while room['mode'] != 'demo' and room['status'] == 'working' and room['pause'] is None and now >= room['deadline']:
         advance(room, room['deadline'])
         changed = True
     if changed:
@@ -108,8 +114,9 @@ def task_status(task, tasks):
 
 def public(room, player=None, host=False):
     phase_index = next(index for index, phase in enumerate(PHASES) if phase['id'] == room['phase'])
+    automatic = room['mode'] != 'demo'
     remaining = room['pause'] if room['pause'] is not None else max(0, room['deadline'] - time.time())
-    if room['status'] != 'working':
+    if not automatic or room['status'] != 'working':
         remaining = 0
     tasks = {task['id']: task for task in room['tasks']}
     people = {person['id']: person for person in room['players'].values()}
@@ -125,15 +132,16 @@ def public(room, player=None, host=False):
         players.append(dict(id=person['id'], name=person['name'], avatar=person['avatar'], role=person['role'],
                             roleLabel=ROLE_LABELS[person['role']], done=sum(task['done'] for task in owned),
                             total=len(owned), me=person is player))
-    session_remaining = remaining + sum(phase['duration'] for phase in PHASES[phase_index + 1:]) if room['status'] == 'working' else 0
+    session_remaining = remaining + sum(phase['duration'] for phase in PHASES[phase_index + 1:]) if automatic and room['status'] == 'working' else 0
     data = dict(schema=2, code=room['code'], status=room['status'], phase=room['phase'],
                 phaseLabel=PHASES[phase_index]['label'], phases=PHASES, remaining=round(remaining),
                 sessionRemaining=round(session_remaining), paused=room['pause'] is not None,
-                mode=room['mode'], limit=35, minPlayers=4, joinUrl=room['joinUrl'], players=players,
+                mode=room['mode'], automatic=automatic, limit=35, minPlayers=4, joinUrl=room['joinUrl'], players=players,
+                presentation=room.get('presentation'),
                 project=dict(config=dict(room['project']['config']), revision=room['project']['revision']),
                 tasks=task_data, events=list(room['events']),
                 progress=dict(done=sum(task['done'] for task in room['tasks']), total=len(room['tasks'])),
-                brief='Készítsünk együtt egy Kandó nyílt napos weboldalt! Minden hozzájárulás számít: tervezz, építs, próbáld ki, és segíts a társadnak. A próbaűrlap nem küld adatot.')
+                brief='A Pacsi kutyakozmetika weboldalt kér: mutassuk be a Fürdetés és a Teljes kozmetika szolgáltatást, a nyitvatartást (H–P 9–17, szombat 9–13), és készítsünk időpontkérő űrlapot. A próbához kitalált kutyanevet használunk; adatot nem küldünk.')
     if player:
         data['self'] = dict(id=player['id'], name=player['name'], avatar=player['avatar'], role=player['role'],
                             roleLabel=ROLE_LABELS[player['role']], taskIds=[task['id'] for task in room['tasks'] if task['ownerId'] == player['id']])
@@ -251,7 +259,7 @@ def too_large(_error):
 
 @app.get('/health')
 def health():
-    return jsonify(ok=True, version='kodlabor-1')
+    return jsonify(ok=True, version='kodlabor-2')
 
 
 @app.post('/api/login')
@@ -294,10 +302,10 @@ def create():
     while connection().execute('SELECT 1 FROM rooms WHERE code=?', (code,)).fetchone():
         code = str(secrets.randbelow(900000) + 100000)
     room = dict(schema=2, code=code, host=secrets.token_urlsafe(32), players={}, status='lobby',
-                phase='brief', mode=mode, pause=None, deadline=0, joinUrl=PUBLIC_URL, created=time.time(),
+                phase='brief', mode=mode, pause=None, deadline=0, presentation=None, joinUrl=PUBLIC_URL, created=time.time(),
                 project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(6), events=[], eventSequence=0,
                 joinRequests={}, controlRequests=[], createRequest=digest)
-    event(room, 'A közös Kandó-oldal készen áll az ötleteitekre.')
+    event(room, 'A Pacsi kutyakozmetika próbaoldala készen áll az ötleteitekre.')
     save(room)
     return jsonify(code=code, token=room['host'])
 
@@ -388,12 +396,22 @@ def control():
     if key and key in room['controlRequests']:
         return jsonify(public(room, host=True))
     action = data.get('action')
-    if action in ('start', 'next') and room['status'] == 'lobby':
+    if action in ('code-html', 'code-css', 'code-javascript', 'code-path', 'code-close'):
+        if room['status'] not in ('working', 'finished') or (room['phase'] != 'handover' and room['status'] != 'finished'):
+            return error('A kódot a közös bemutatónál vagy a lezárás után mutathatod meg.', 409)
+        if action == 'code-close':
+            room['presentation'] = None
+        elif action == 'code-path':
+            presentation = room.get('presentation') or dict(tab='html', path=False)
+            room['presentation'] = dict(tab=presentation['tab'], path=not presentation['path'])
+        else:
+            room['presentation'] = dict(tab=action.removeprefix('code-'), path=False)
+    elif action in ('start', 'next') and room['status'] == 'lobby':
         if room['mode'] != 'demo' and len(room['players']) < 4:
             return error('A csoportos módhoz legalább 4 résztvevő kell. Kisebb létszámhoz indíts bemutató módot!', 409)
         room['status'] = 'working'
         room['phase'] = 'brief'
-        room['deadline'] = time.time() + PHASES[0]['duration']
+        room['deadline'] = time.time() + PHASES[0]['duration'] if room['mode'] != 'demo' else 0
         room['pause'] = None
         event(room, 'Indul a közös terv: mindenki saját hozzájárulást kapott.')
     elif action == 'start' and room['status'] == 'working':
@@ -405,12 +423,12 @@ def control():
             room['pause'] = max(0, room['deadline'] - time.time())
             event(room, 'A tanár szünetet tart. Minden feladat megvár benneteket.')
         else:
-            room['deadline'] = time.time() + room['pause']
+            room['deadline'] = time.time() + room['pause'] if room['mode'] != 'demo' else 0
             room['pause'] = None
             event(room, 'Folytatódik a közös alkotás.')
     elif action == 'resume' and room['status'] == 'working':
         if room['pause'] is not None:
-            room['deadline'] = time.time() + room['pause']
+            room['deadline'] = time.time() + room['pause'] if room['mode'] != 'demo' else 0
             room['pause'] = None
     elif action in ('finish', 'end') and room['status'] in ('working', 'finished'):
         if room['status'] != 'finished':

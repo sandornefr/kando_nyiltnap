@@ -97,6 +97,92 @@ class SharedProjectTests(unittest.TestCase):
             self.assertTrue(all(person['total'] <= 2 for person in state['players']))
         self.post('join', dict(code=self.code, name='Negyedik'), 409)
 
+    def test_demo_has_no_clock_and_advances_only_on_teacher_command(self):
+        self.create(0, 'demo')
+        start = time.time()
+        self.control('start')
+        with patch('server.time.time', return_value=start + 3600):
+            state = self.state()
+            self.assertEqual('brief', state['phase'])
+            state = self.control('next')
+            self.assertEqual('build', state['phase'])
+        with patch('server.time.time', return_value=start + 12 * 3600):
+            state = self.state()
+            self.assertEqual('working', state['status'])
+            self.assertEqual('build', state['phase'])
+            self.assertFalse(state['automatic'])
+            self.assertFalse(state['paused'])
+            self.assertEqual(0, state['remaining'])
+            self.assertEqual(0, state['sessionRemaining'])
+            self.assertEqual(0, server.load(self.code)['deadline'])
+            self.submit('code-buttonTarget', 'signup')
+            self.assertTrue(self.probe('test-buttonTarget')['passed'])
+            self.submit('test-buttonTarget', 'confirm')
+            self.assertEqual('review', self.control('next')['phase'])
+        with patch('server.time.time', return_value=start + 13 * 3600):
+            self.assertEqual('review', self.state()['phase'])
+            self.submit('design-theme', 'mint')
+            self.assertEqual('handover', self.control('next')['phase'])
+        with patch('server.time.time', return_value=start + 14 * 3600):
+            self.assertEqual('working', self.state()['status'])
+            self.assertEqual('finished', self.control('next')['status'])
+
+    def test_current_task_copy_reaches_existing_rooms_without_losing_work(self):
+        self.create(35)
+        self.start_build()
+        self.submit('design-title', 'build')
+        self.submit('code-buttonTarget', 'signup')
+        self.probe('test-buttonTarget')
+        room = server.load(self.code)
+        previous_project = dict(room['project'])
+        previous_work = [{key: task[key] for key in ('id', 'ownerId', 'done', 'value', 'issue', 'probes')} for task in room['tasks']]
+        for task in room['tasks']:
+            task.update(title='Korábbi nyílt nap', hint='Korábbi meghívó',
+                        options=[dict(option, label='Korábbi felirat') for option in task['options']])
+        server.save(room)
+        state = self.state()
+        self.assertIn('Pacsi kutyakozmetika', state['brief'])
+        self.assertIn('Fürdetés', state['brief'])
+        self.assertIn('H–P 9–17', state['brief'])
+        self.assertIn('kitalált kutyanevet', state['brief'])
+        self.assertEqual(previous_project, state['project'])
+        for task, current in zip(state['tasks'], CATALOGUE):
+            self.assertEqual(current['title'], task['title'])
+            self.assertEqual(current['hint'], task['hint'])
+            self.assertEqual(current['options'], task['options'])
+        refreshed = server.load(self.code)
+        self.assertEqual(previous_work, [{key: task[key] for key in ('id', 'ownerId', 'done', 'value', 'issue', 'probes')} for task in refreshed['tasks']])
+        self.submit('test-buttonTarget', 'confirm')
+
+    def test_source_presentation_is_host_controlled_shared_and_preserved_on_finish(self):
+        state = self.create()
+        self.assertIsNone(state['presentation'])
+        self.control('code-html', expected=409)
+        self.start_build()
+        self.control('code-css', expected=409)
+        self.post('control', dict(code=self.code, token=self.tokens[0], action='code-html'), 403)
+        self.control('next')
+        self.control('next')
+        state = self.control('code-css')
+        self.assertEqual(dict(tab='css', path=False), state['presentation'])
+        self.assertEqual(state['presentation'], self.state()['presentation'])
+        self.assertEqual(state['presentation'], server.load(self.code)['presentation'])
+        state = self.control('code-path', requestId='code-path-once-123')
+        self.assertEqual(dict(tab='css', path=True), state['presentation'])
+        self.assertEqual(state['presentation'], self.control('code-path', requestId='code-path-once-123')['presentation'])
+        self.assertEqual(dict(tab='html', path=False), self.control('code-html')['presentation'])
+        presentation = self.control('code-javascript')['presentation']
+        with patch('server.time.time', return_value=time.time() + 400):
+            state = self.state()
+            self.assertEqual('finished', state['status'])
+            self.assertEqual(presentation, state['presentation'])
+            self.assertEqual(dict(tab='javascript', path=True), self.control('code-path')['presentation'])
+            self.assertIsNone(self.control('code-close')['presentation'])
+            self.assertIsNone(self.state()['presentation'])
+            self.assertEqual(dict(tab='html', path=True), self.control('code-path')['presentation'])
+        self.control('close')
+        self.control('code-html', expected=409)
+
     def test_teacher_and_player_capabilities_are_private(self):
         self.create()
         public = self.state()
@@ -193,7 +279,9 @@ class SharedProjectTests(unittest.TestCase):
     def test_phases_catch_up_and_finish_without_claiming_complete(self):
         self.create()
         start = time.time()
-        self.control('start')
+        state = self.control('start')
+        self.assertTrue(state['automatic'])
+        self.assertEqual(360, state['sessionRemaining'])
         self.submit('design-theme', 'mint', expected=409)
         with patch('server.time.time', return_value=start + 46):
             self.assertEqual('build', self.state()['phase'])
