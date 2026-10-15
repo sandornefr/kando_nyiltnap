@@ -35,7 +35,7 @@ def code(key, title, hint, options):
 
 BUILDERS = [
     design('theme', 'Színezd ki az oldalt!', 'A választott szín megjelenik a közös oldalon.', [option('violet', 'Szilvalila'), option('mint', 'Erdőzöld'), option('amber', 'Terrakotta')]),
-    design('title', 'Tedd ki a főcímet!', 'Válassz címet! Küldd ki az oldalra!', [option('discover', 'Kutyakozmetika, odafigyeléssel.'), option('build', 'Ápolt bunda, jó közérzet.'), option('future', 'Szőrápolás, nyugodt környezetben.')]),
+    design('title', 'Tedd ki a főcímet!', 'Válassz címet! Küldd ki az oldalra!', [option('discover', 'Kutyakozmetika, odafigyeléssel'), option('build', 'Ápolt bunda, jó közérzet'), option('future', 'Szőrápolás, nyugodt környezetben')]),
     code('buttonTarget', 'Kösd be az időpontkérő gombot!', 'A gomb nyissa meg az Időpontkérést! Ott még épülhet a tartalom.', [option('signup', 'Az időpontkéréshez ugrik', 'KATTINTÁS → IDŐPONTKÉRÉS'), option('programs', 'A szolgáltatásokhoz ugrik', 'KATTINTÁS → SZOLGÁLTATÁSOK')]),
     code('formRule', 'Építs időpontkérő űrlapot!', 'Kerüljön be az űrlap! Üres kutyanévvel ne lehessen elküldeni.', [option('nonempty', 'Csak kitöltött mezővel sikeres', 'HA VAN SZÖVEG → SIKER'), option('always', 'Mindig sikeres', 'MINDEN ESETBEN → SIKER')]),
     design('intro', 'Tedd ki a bemutatkozást!', 'Ez a mondat a főcím alá kerül.', [option('curious', 'Fürdetés és teljes kozmetika, előre egyeztetett időpontban.'), option('team', 'Kistestű és nagytestű kutyákat is várunk.'), option('practice', 'Válassz szolgáltatást, és kérj időpontot online.')]),
