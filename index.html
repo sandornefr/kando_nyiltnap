@@ -1,5 +1,25 @@
 <!doctype html>
-<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090e1c"><title>Kandó Küldetés · Játssz a jövőddel!</title><link rel="stylesheet" href="style.css"></head><body>
-<header><a class="brand" href="./">K<span>◈</span> / KANDÓ <small>KÜLDETÉS</small></a><span class="edition">PRÓBAVÁLTOZAT · 01</span><button id="full" class="icon" aria-label="Teljes képernyő">⛶</button></header>
-<main id="app"></main><div id="notice" role="status" hidden></div><script src="config.js"></script><script src="app.js"></script><script src="viewport.js"></script>
-</body></html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0c1424">
+  <meta name="description" content="KANDÓ KÓDLABOR – közösen tervezünk, fejlesztünk és tesztelünk egy weboldalt.">
+  <title>KANDÓ KÓDLABOR</title>
+  <link rel="stylesheet" href="style.css?v=kodlabor1">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Kandó Kódlabor kezdőlap"><span class="brand-mark" aria-hidden="true">&lt;/&gt;</span><span>KANDÓ <strong>KÓDLABOR</strong></span></a>
+    <span id="context" class="header-context">Ma ti vagytok a fejlesztőcsapat.</span>
+    <div class="header-actions"><button id="full" class="button quiet icon-button" aria-label="Teljes képernyő">⛶</button></div>
+  </header>
+  <div id="connection" hidden role="status">Kapcsolódás…</div>
+  <main id="app" aria-label="Kódlabor munkaterület"></main>
+  <div id="notice" hidden role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="site.js?v=kodlabor1"></script>
+  <script src="app.js?v=kodlabor1"></script>
+  <script src="viewport.js?v=kodlabor1"></script>
+</body>
+</html>

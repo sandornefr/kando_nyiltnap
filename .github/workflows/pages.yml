@@ -21,12 +21,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Verify shared project rules
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest -v test_backend.py
+          node --check app.js
+          node --check site.js
       - name: Assemble public files only
         env:
           API_BASE: ${{ vars.API_BASE }}
         run: |
           mkdir public
-          cp index.html app.js style.css config.js viewport.js public/
+          cp index.html app.js site.js style.css config.js viewport.js public/
           touch public/.nojekyll
           python - <<'PY'
           import os, json
