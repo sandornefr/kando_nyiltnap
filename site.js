@@ -195,6 +195,70 @@
   @keyframes ks-built-in{0%{outline:3px solid #5e9b72;outline-offset:3px;filter:brightness(1.12);transform:translateY(4px)}20%{transform:translateY(0)}100%{outline:3px solid transparent;outline-offset:6px;filter:none}}
   @container ks-site (max-height:330px){.ks-site.ks-building .ks-intro{font-size:14px;line-height:1.25;margin-bottom:8px}.ks-site.ks-building .ks-title{margin-bottom:8px}.ks-site .ks-services-pending{min-height:44px}.ks-site .ks-empty{padding:8px}.ks-site .ks-home.ks-no-hero{display:flex}}
   @container ks-site (max-width:499px) and (max-height:390px){.ks-site.ks-building .ks-hero-copy{padding:10px}.ks-site.ks-building .ks-intro{font-size:14px;line-height:1.2;max-width:100%}.ks-site.ks-building .ks-title{font-size:23px}}
+  /* The photograph is a separate grid cell. Text never shares its pixels,
+     even when the surrounding classroom preview is wide and short. */
+  .ks-site .ks-hero{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);align-items:stretch}
+  .ks-site .ks-hero:after{display:none}
+  .ks-site .ks-hero-media{position:relative;inset:auto;grid-column:2;grid-row:1;min-width:0;min-height:0;width:100%;height:100%}
+  .ks-site .ks-hero-copy{grid-column:1;grid-row:1;align-self:center;width:100%;max-width:none;padding:clamp(12px,2.2cqw,26px);overflow-wrap:break-word}
+  .ks-site .ks-hero-copy .ks-title{overflow-wrap:break-word;hyphens:auto}
+  .ks-site .ks-hero-copy .ks-intro{max-width:none}
+  .ks-site .ks-hero.ks-no-photo,.ks-site .ks-hero.ks-photo-only{grid-template-columns:minmax(0,1fr)}
+  .ks-site .ks-hero.ks-photo-only .ks-hero-media{inset:auto;grid-column:1}
+  .ks-site .ks-photo-credit{right:7px;bottom:6px;max-width:40%;font-size:12px}
+  @container ks-site (max-width:499px){
+    .ks-site .ks-hero{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)}
+    .ks-site .ks-hero-copy,.ks-site.ks-building .ks-hero-copy{padding:10px}
+    .ks-site .ks-hero-copy .ks-title{font-size:24px;line-height:1.1;margin-bottom:8px}
+    .ks-site.ks-heading-normal .ks-hero-copy .ks-title{font-size:22px}
+    .ks-site .ks-hero-copy .ks-intro{font-size:14px;line-height:1.3;margin-bottom:10px}
+    .ks-site .ks-photo-credit{display:none}
+  }
+  @container ks-site (max-width:499px) and (min-height:450px){
+    .ks-site .ks-hero:not(.ks-no-photo):not(.ks-photo-only){grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(55px,1fr) auto}
+    .ks-site .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-media{grid-column:1;grid-row:1}
+    .ks-site .ks-hero:not(.ks-no-photo):not(.ks-photo-only) .ks-hero-copy{grid-column:1;grid-row:2;padding:12px 14px}
+  }
+  @container ks-site (min-width:500px) and (max-height:285px){
+    .ks-site .ks-hero{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+    .ks-site .ks-hero-copy{padding:8px}
+    .ks-site .ks-hero-copy .ks-title{font-size:22px;line-height:1.1;margin-bottom:6px}
+    .ks-site.ks-heading-normal .ks-hero-copy .ks-title{font-size:21px}
+    .ks-site .ks-hero-copy .ks-intro{font-size:14px;line-height:1.2;margin-bottom:6px}
+    .ks-site .ks-hero-actions .ks-primary{padding:7px 9px}
+  }
+  /* A projector gets readable typography, not the phone's compact text.
+     Service tiles move alongside the hero so the main scene keeps height. */
+  @container ks-site (min-width:900px) and (min-height:340px){
+    .ks-site .ks-header{min-height:54px;padding:5px 20px}
+    .ks-site .ks-brand-name{font-size:33px}
+    .ks-site .ks-brand-description,.ks-site .ks-nav a{font-size:18px}
+    .ks-site .ks-stage{padding:12px 16px}
+    .ks-site .ks-hero-copy{padding:20px 24px}
+    .ks-site .ks-hero-copy .ks-title{font-size:clamp(32px,8.5cqh,48px);line-height:1.12;margin-bottom:12px}
+    .ks-site.ks-heading-normal .ks-hero-copy .ks-title{font-size:clamp(30px,7.5cqh,40px)}
+    .ks-site .ks-hero-copy .ks-intro{display:block;font-size:20px;line-height:1.4;margin-bottom:16px}
+    .ks-site button,.ks-site .ks-filters{font-size:18px}
+    .ks-site .ks-primary{min-height:48px;padding:12px 18px}
+    .ks-site .ks-mini-card strong{font-size:23px;line-height:1.2}
+    .ks-site .ks-mini-card small{display:block;font-size:17px;line-height:1.35}
+    .ks-site .ks-page-top h3,.ks-site .ks-booking-head h3{font-size:32px}
+    .ks-site .ks-program-card h4{font-size:28px}
+    .ks-site .ks-program-card p{display:block;font-size:18px;line-height:1.4}
+    .ks-site .ks-day-label strong,.ks-site .ks-slot strong{font-size:25px}
+    .ks-site .ks-day-label span,.ks-site .ks-slot span,.ks-site .ks-field-label,.ks-site .ks-count-label,.ks-site .ks-status,.ks-site .ks-local-note{font-size:18px}
+    .ks-site .ks-name{height:48px;font-size:20px}
+  }
+  @container ks-site (min-width:900px) and (min-height:340px) and (max-height:550px){
+    .ks-site .ks-home:not(.ks-no-services):not(.ks-no-hero){display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.34fr);gap:14px}
+    .ks-site .ks-mini-programs,.ks-site.ks-layout-split .ks-mini-programs{grid-template-columns:1fr;grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-rows:auto;gap:12px;min-height:0}
+    .ks-site .ks-mini-card,.ks-site.ks-layout-split .ks-mini-card,.ks-site.ks-compact .ks-mini-card{grid-template-columns:32% minmax(0,1fr);height:100%;min-height:0;max-height:none;padding:0 12px 0 0;gap:12px}
+    .ks-site .ks-mini-photo,.ks-site.ks-layout-split .ks-mini-photo{width:100%;height:100%;min-height:0}
+    .ks-site .ks-mini-card>svg{display:none}
+    .ks-site.ks-layout-split .ks-mini-card>span{display:block}
+    .ks-site .ks-mini-programs[data-count="1"]{grid-template-rows:minmax(0,1fr);height:min(190px,45cqh);align-self:center}
+    .ks-site .ks-home.ks-no-hero .ks-mini-programs{height:100%;align-self:stretch}
+  }
   @media (prefers-reduced-motion:reduce){.ks-site *{transition:none;animation:none;scroll-behavior:auto}.ks-site .ks-just-built{outline:2px solid #5e9b72;outline-offset:2px}}
   `;
   function installStyle(){

@@ -198,7 +198,12 @@ function liveDraft(){
   if(current&&now<draftFocus.until)return current;
   const next=list[(list.findIndex(x=>x.taskId===current?.taskId)+1)%list.length];draftFocus={taskId:next.taskId,until:now+8000};return next;
 }
-function commission(){return `<div class="commission-brief"><span class="eyebrow">TÜCSÖK KUTYAKOZMETIKA · MEGBÍZÁS</span><h2>Legyen egyszerű<br>időpontot kérni!</h2><div class="brief-requirements"><div class="brief-requirement"><b>01</b><span>Látszódjanak a kezelések és a nyitvatartás!</span></div><div class="brief-requirement"><b>02</b><span>Működjön az időpontkérés próbája!</span></div><div class="brief-requirement"><b>03</b><span>Telefonon is könnyű legyen használni!</span></div></div>${view==='host'?button('Megnézzük a valódi hirdetést','commission-source','secondary source-trigger'):'<p>Ti tervezitek. Ti fejlesztitek. Ti tesztelitek.</p>'}</div>`;}
+function commission(){return `<div class="commission-brief"><div class="commission-heading"><span class="eyebrow">TÜCSÖK KUTYAKOZMETIKA · MEGBÍZÁS</span><h2>Legyen egyszerű<br>időpontot kérni!</h2></div><div class="brief-requirements"><div class="brief-requirement"><b>01</b><span>Látszódjanak a kezelések és a nyitvatartás!</span></div><div class="brief-requirement"><b>02</b><span>Működjön az időpontkérés próbája!</span></div><div class="brief-requirement"><b>03</b><span>Telefonon is könnyű legyen használni!</span></div></div><div class="commission-action">${view==='host'?button('Megnézzük a valódi hirdetést','commission-source','secondary source-trigger'):'<p>Ti tervezitek. Ti fejlesztitek. Ti tesztelitek.</p>'}</div></div>`;}
+function contributionNotice(actor,description,kind='Rögzítve'){
+  const el=$('#event-line');if(!el)return;
+  const markup=actor?`<span class="contribution-kind">${esc(kind)}</span><strong class="contribution-actor">${esc(actor)}</strong><span class="contribution-description">${esc(description)}</span>`:`<span class="contribution-description">${esc(description)}</span>`;
+  if(el.innerHTML!==markup)el.innerHTML=markup;
+}
 function patchHost(){
   if(state.status==='lobby'){if($('#player-count'))$('#player-count').textContent=state.connectedCount??state.players.length;if($('#lobby-roster')&&!$('#person-modal')){const html=personRows();if($('#lobby-roster').innerHTML!==html)$('#lobby-roster').innerHTML=html;}if($('#host-controls'))$('#host-controls').innerHTML=hostControls();return;}
   if($('#clock'))$('#clock').textContent=state.mode==='demo'?'Saját tempó':state.paused?'Szünet':'Váltás: '+fmt(state.remaining);
@@ -206,7 +211,7 @@ function patchHost(){
   if($('#contribution-count'))$('#contribution-count').textContent=`${state.progress?.done||0} / ${state.progress?.total||0} feladat`;
   // Stable controls and workspace stay mounted during polling.
   if($('#team-content')&&!modalTask){const html=pane==='people'?personRows():tasksPanel();if($('#team-content').innerHTML!==html)$('#team-content').innerHTML=html;}
-  const latest=(state.events||[]).slice(-1)[0];if($('#event-line'))$('#event-line').textContent=latest?.text||'Üres webhely. Az első hozzájárulásra vár.';
+  const latest=(state.phase!=='brief'&&state.project.lastChange)||(state.events||[]).slice(-1)[0];contributionNotice(latest?.actor,latest?.label||latest?.text||'Üres webhely. Az első hozzájárulásra vár.',({'test-pass':'Ellenőrizve','test-report':'Javítás'})[latest?.kind]||'Rögzítve');
   if($('#screen-progress'))$('#screen-progress').textContent=`${state.progress?.done||0} közös hozzájárulás`;
   if(state.phase==='brief'){const markup=commission();if($('#shared-site').innerHTML!==markup)$('#shared-site').innerHTML=markup;return;}
   const draft=liveDraft(),draftSignature=draft?JSON.stringify([draft.taskId,draft.value]):'';
@@ -217,8 +222,8 @@ function patchHost(){
   }
   const live=state.project.liveTest;
   if(live&&live.id!==lastLiveTest&&!draft){lastLiveTest=live.id;const controller=$('#shared-site')?._siteController;if(followBuild&&controller?.getView()!==live.view)controller?.go(live.view);}
-  if(draft&&$('#event-line'))$('#event-line').textContent=`${draft.actor} próbálgatja · még nincs rögzítve${(state.project.liveDrafts?.length||0)>1?' · '+state.project.liveDrafts.length+' élő próba':''}`;
-  else if(live&&followBuild&&$('#event-line'))$('#event-line').textContent=`${live.actor} most tesztel → ${{home:'Főoldal',programs:'Szolgáltatások',signup:'Időpontkérés',contact:'Kapcsolat',credits:'Fotók'}[live.view]||live.view}`;
+  if(draft)contributionNotice(draft.actor,'Próbálgatja · még nincs rögzítve','Élő próba');
+  else if(live&&followBuild)contributionNotice(live.actor,`Teszteli: ${{home:'Főoldal',programs:'Szolgáltatások',signup:'Időpontkérés',contact:'Kapcsolat',credits:'Fotók'}[live.view]||live.view}`,'Teszt');
   syncBuildBrowser();
   if(modalTask)patchTaskDraft();
 }
