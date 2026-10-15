@@ -134,7 +134,7 @@ class SharedProjectTests(unittest.TestCase):
         self.submit('code-buttonTarget', 'signup')
         self.probe('test-buttonTarget')
         room = server.load(self.code)
-        previous_project = dict(room['project'])
+        previous_project = self.state()['project']
         previous_work = [{key: task[key] for key in ('id', 'ownerId', 'done', 'value', 'issue', 'probes')} for task in room['tasks']]
         for task in room['tasks']:
             task.update(title='Korábbi nyílt nap', hint='Korábbi meghívó',
@@ -252,6 +252,8 @@ class SharedProjectTests(unittest.TestCase):
     def test_all_functional_checks_follow_selected_configuration(self):
         self.create(35)
         self.start_build()
+        self.submit('design-cardCode', DEFAULTS['cardCode'])
+        self.submit('design-cardNetwork', DEFAULTS['cardNetwork'])
         for key, good in FUNCTIONAL.items():
             task_id = 'code-' + key
             task = self.task(self.state(), task_id)
@@ -262,6 +264,285 @@ class SharedProjectTests(unittest.TestCase):
             self.assertTrue(self.probe('test-' + key)['passed'], key)
         self.submit('design-theme', 'amber')
         self.assertTrue(self.probe('test-theme')['passed'])
+
+    def test_blank_project_and_first_default_publication_are_distinct(self):
+        for count, mode in ((4, 'group'), (0, 'demo')):
+            with self.subTest(mode=mode):
+                state = self.create(count, mode)
+                self.assertEqual([], state['project']['builtKeys'])
+                self.assertEqual(0, state['project']['revision'])
+                self.assertIsNone(state['project']['lastChange'])
+                state = self.start_build()
+                self.assertEqual([], state['project']['builtKeys'])
+                state = self.submit('design-title', DEFAULTS['title'])
+                self.assertEqual(['title'], state['project']['builtKeys'])
+                self.assertEqual(1, state['project']['revision'])
+                change = state['project']['lastChange']
+                self.assertEqual('title', change['key'])
+                self.assertEqual('home', change['view'])
+                self.assertEqual('publish', change['kind'])
+                self.assertEqual('A tanár', change['actor'])
+                self.assertEqual(change['eventId'], state['events'][-1]['id'])
+                self.assertEqual('title', state['events'][-1]['key'])
+                retry = self.submit('design-title', DEFAULTS['title'])
+                self.assertEqual(state['project'], retry['project'])
+                self.assertEqual(state['events'], retry['events'])
+
+    def test_publication_attribution_and_issue_never_remove_visible_work(self):
+        self.create()
+        self.start_build()
+        token = next(token for token in self.tokens
+                     if 'code-buttonTarget' in self.state(token)['self']['taskIds'])
+        name = self.state(token)['self']['name']
+        state = self.submit('code-buttonTarget', 'programs', token)
+        self.assertEqual(name, state['project']['lastChange']['actor'])
+        self.assertEqual(['buttonTarget'], state['project']['builtKeys'])
+        self.probe('test-buttonTarget')
+        state = self.submit('test-buttonTarget', 'report')
+        self.assertEqual(['buttonTarget'], state['project']['builtKeys'])
+        self.assertEqual(1, state['project']['revision'])
+        self.assertEqual('programs', state['project']['config']['buttonTarget'])
+        self.assertEqual('test-report', state['project']['lastChange']['kind'])
+        repaired = self.submit('code-buttonTarget', 'signup', token)
+        self.assertEqual(['buttonTarget'], repaired['project']['builtKeys'])
+        self.assertEqual(2, repaired['project']['revision'])
+        self.assertEqual('publish', repaired['project']['lastChange']['kind'])
+
+    def test_legacy_published_values_and_phase_changes_do_not_fill_missing_work(self):
+        self.create(35)
+        self.start_build()
+        room = server.load(self.code)
+        next(task for task in room['tasks'] if task['key'] == 'hero').update(value='code', done=True)
+        room['project'].pop('lastChange', None)
+        server.save(room)
+        state = self.state()
+        self.assertEqual(['hero'], state['project']['builtKeys'])
+        self.assertIsNone(state['project']['lastChange'])
+        self.control('next')
+        self.control('next')
+        state = self.control('finish')
+        self.assertEqual(['hero'], state['project']['builtKeys'])
+        self.assertEqual(1, state['progress']['done'])
+        self.assertEqual(0, state['project']['revision'])
+
+    def test_demo_contains_full_project_and_test_prerequisites_are_visible_work(self):
+        state = self.create(0, 'demo')
+        self.assertEqual(36, len(state['tasks']))
+        self.start_build()
+        state = self.submit('code-feedback', 'visible')
+        self.assertEqual('locked', self.task(state, 'test-feedback')['status'])
+        self.probe('test-feedback', expected=409)
+        self.submit('code-formRule', 'nonempty')
+        self.assertTrue(self.probe('test-feedback')['passed'])
+        state = self.submit('code-filterRule', 'match')
+        self.assertEqual('locked', self.task(state, 'test-filterRule')['status'])
+        self.submit('design-cardCode', 'create')
+        self.probe('test-filterRule', expected=409)
+        self.submit('design-cardNetwork', 'connect')
+        self.assertTrue(self.probe('test-filterRule')['passed'])
+        self.create()
+        self.start_build()
+        self.submit('code-buttonTarget', 'signup')
+        self.assertTrue(self.probe('test-buttonTarget')['passed'])
+        self.assertNotIn('formRule', self.state()['project']['builtKeys'])
+
+    def test_live_test_preview_is_private_attributed_temporary_and_not_publication(self):
+        self.create()
+        self.start_build()
+        tester = next(token for token in self.tokens
+                      if 'test-buttonTarget' in self.state(token)['self']['taskIds'])
+        action = dict(code=self.code, token=tester, taskId='test-buttonTarget',
+                      action='cta', view='signup', result='empty')
+        self.post('preview-action', action, 409)
+        self.submit('code-buttonTarget', 'signup')
+        before = self.state()['project']
+        self.post('preview-action', dict(action, token='spectator'), 403)
+        self.post('preview-action', dict(action, token=self.tokens[0]), 403)
+        self.post('preview-action', dict(action, result='Kitalált kutyanév'), 400)
+        self.post('preview-action', dict(action, dogName='Bodri'), 400)
+        self.post('preview-action', dict(action, view='https://example.com'), 400)
+        self.post('preview-action', action)
+        state = self.state()
+        live = state['project']['liveTest']
+        self.assertEqual(self.state(tester)['self']['name'], live['actor'])
+        self.assertEqual('signup', live['view'])
+        self.assertEqual('cta', live['action'])
+        self.assertEqual('empty', live['result'])
+        self.assertEqual(before['revision'], state['project']['revision'])
+        self.assertEqual(before['lastChange'], state['project']['lastChange'])
+        self.assertEqual(before['builtKeys'], state['project']['builtKeys'])
+        self.assertNotIn(tester, json.dumps(live))
+        self.post('preview-action', dict(action, action='back', view='home'))
+        self.assertEqual(live, self.state()['project']['liveTest'])
+        with patch('server.time.time', return_value=live['at'] + 6):
+            self.assertIsNone(self.state()['project']['liveTest'])
+        self.control('pause')
+        self.post('preview-action', action, 409)
+        self.control('resume')
+        self.control('close')
+        self.post('preview-action', action, 409)
+
+    def test_live_choice_is_attributed_without_publishing_or_invalidating_probe(self):
+        self.create()
+        self.start_build()
+        self.submit('code-buttonTarget', 'signup')
+        self.probe('test-buttonTarget')
+        token = next(token for token in self.tokens
+                     if 'code-buttonTarget' in self.state(token)['self']['taskIds'])
+        before = self.state()
+        baseline_tasks = server.load(self.code)['tasks']
+        action = dict(code=self.code, token=token, taskId='code-buttonTarget',
+                      value='programs', baseValue='signup', baseVersion=1)
+        self.post('try', action)
+        state = self.state()
+        self.assertEqual(before['project']['config'], state['project']['config'])
+        self.assertEqual(before['project']['revision'], state['project']['revision'])
+        self.assertEqual(before['project']['builtKeys'], state['project']['builtKeys'])
+        self.assertEqual(before['project']['lastChange'], state['project']['lastChange'])
+        self.assertEqual(before['progress'], state['progress'])
+        self.assertEqual(before['events'], state['events'])
+        self.assertEqual(baseline_tasks, server.load(self.code)['tasks'])
+        draft = state['project']['liveDrafts'][0]
+        self.assertEqual('buttonTarget', draft['key'])
+        self.assertEqual('programs', draft['value'])
+        self.assertEqual(self.state(token)['self']['name'], draft['actor'])
+        self.assertNotIn(token, json.dumps(draft))
+        self.submit('test-buttonTarget', 'confirm')  # The published version's probe remains valid.
+        published = self.submit('code-buttonTarget', 'programs', token)
+        self.assertEqual([], published['project']['liveDrafts'])
+        self.assertEqual('programs', published['project']['config']['buttonTarget'])
+        self.assertEqual(before['project']['revision'] + 1, published['project']['revision'])
+        self.post('try', action, 409)  # Delayed choice from before publication cannot return.
+
+    def test_live_choice_replaces_actor_draft_expires_and_does_not_build(self):
+        self.create()
+        self.start_build()
+        token = self.tokens[0]  # The small group's designer owns theme and title.
+        first = dict(code=self.code, token=token, taskId='design-title', value='future', baseValue=None, baseVersion=0)
+        self.post('try', first)
+        draft = self.state()['project']['liveDrafts'][0]
+        self.post('try', dict(first, taskId='design-theme', value='mint'))
+        state = self.state()
+        self.assertEqual(1, len(state['project']['liveDrafts']))
+        self.assertGreater(state['project']['liveDrafts'][0]['id'], draft['id'])
+        self.assertEqual('theme', state['project']['liveDrafts'][0]['key'])
+        self.assertEqual([], state['project']['builtKeys'])
+        self.assertEqual(0, state['project']['revision'])
+        self.post('try', dict(first, token=self.host))
+        state = self.state()
+        self.assertEqual(2, len(state['project']['liveDrafts']))
+        self.assertEqual('A tanár', state['project']['liveDrafts'][0]['actor'])
+        with patch('server.time.time', return_value=time.time() + 16):
+            expired = self.state()['project']
+            self.assertEqual([], expired['liveDrafts'])
+            self.assertEqual([], expired['builtKeys'])
+            self.assertEqual(DEFAULTS, expired['config'])
+
+    def test_live_choice_requires_active_owner_valid_choice_and_current_baseline(self):
+        self.create()
+        self.start_build()
+        action = dict(code=self.code, token=self.tokens[0], taskId='design-title', value='future', baseValue=None, baseVersion=0)
+        self.post('try', dict(action, token='spectator'), 403)
+        self.post('try', dict(action, token=self.tokens[1]), 403)
+        self.post('try', dict(action, token=self.host, taskId='test-buttonTarget'), 409)
+        self.post('try', dict(action, value='arbitrary input'), 400)
+        self.post('try', dict(action, dogName='Bodri'), 400)
+        self.post('try', dict(action, baseValue='discover'), 409)
+        self.post('try', dict(action, baseVersion=True), 409)
+        self.post('try', dict(action, baseVersion=1), 409)
+        self.post('try', {key: value for key, value in action.items() if key != 'baseValue'}, 409)
+        self.post('try', {key: value for key, value in action.items() if key != 'baseVersion'}, 409)
+        self.control('pause')
+        self.post('try', action, 409)
+        self.control('resume')
+        self.post('try', action)
+        self.post('leave', dict(code=self.code, token=action['token']))
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+        self.post('try', action, 409)
+        self.post('resume', dict(code=self.code, token=action['token']))
+        self.post('try', action)
+        player_id = self.state(action['token'])['self']['id']
+        self.control('remove-player', playerId=player_id)
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+        self.post('try', action, 403)
+        self.control('close')
+        self.post('try', dict(action, token=self.host), 409)
+
+    def test_live_choices_filter_legacy_inactive_revoked_or_reassigned_actor(self):
+        self.create()
+        self.start_build()
+        token = self.tokens[0]
+        action = dict(code=self.code, token=token, taskId='design-title', value='future', baseValue=None, baseVersion=0)
+        self.post('try', action)
+        room = server.load(self.code)
+        actor_id = room['players'][token]['id']
+        room['players'][token]['active'] = False
+        server.save(room)
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+        room['players'][token]['active'] = True
+        next(task for task in room['tasks'] if task['id'] == 'design-title')['ownerId'] = None
+        server.save(room)
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+        next(task for task in room['tasks'] if task['id'] == 'design-title')['ownerId'] = actor_id
+        room['players'].pop(token)
+        server.save(room)
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+
+    def test_visual_reviews_wait_for_the_element_they_change(self):
+        self.create(0, 'demo')
+        self.start_build()
+        self.submit('design-headingSize', 'large')
+        self.probe('test-headingSize', expected=409)
+        self.submit('design-title', 'discover')
+        self.assertTrue(self.probe('test-headingSize')['passed'])
+        self.submit('design-borderStyle', 'soft')
+        self.probe('test-borderStyle', expected=409)
+        self.submit('design-layout', 'cards')
+        self.assertTrue(self.probe('test-borderStyle')['passed'])
+
+    def test_live_previews_are_hidden_when_paused_or_presenting_final_work(self):
+        for action in ('pause', 'handover', 'finish', 'close'):
+            with self.subTest(action=action):
+                self.create(0, 'demo')
+                self.start_build()
+                self.submit('code-buttonTarget', 'signup')
+                self.post('try', dict(code=self.code, token=self.host,
+                                     taskId='design-title', value='future', baseValue=None, baseVersion=0))
+                self.post('preview-action', dict(code=self.code, token=self.host,
+                          taskId='test-buttonTarget', action='cta', view='signup', result='empty'))
+                before = self.state()['project']
+                self.assertEqual(1, len(before['liveDrafts']))
+                self.assertIsNotNone(before['liveTest'])
+                if action == 'handover':
+                    review = self.control('next')['project']
+                    self.assertEqual(before['liveDrafts'], review['liveDrafts'])
+                    self.assertEqual(before['liveTest'], review['liveTest'])
+                    state = self.control('next')
+                else:
+                    state = self.control(action)
+                self.assertEqual([], state['project']['liveDrafts'])
+                self.assertIsNone(state['project']['liveTest'])
+                self.assertEqual(before['builtKeys'], state['project']['builtKeys'])
+                self.assertEqual(before['config'], state['project']['config'])
+                self.assertEqual(before['revision'], state['project']['revision'])
+
+    def test_same_value_publication_rejects_a_delayed_older_draft(self):
+        self.create()
+        self.start_build()
+        first = self.submit('design-title', 'discover')
+        first_version = self.task(first, 'design-title')['publishVersion']
+        self.assertEqual(1, first_version)
+        old_attempt = dict(code=self.code, token=self.host, taskId='design-title',
+                           value='future', baseValue='discover', baseVersion=first_version)
+        self.post('try', old_attempt)
+        published = self.submit('design-title', 'discover')
+        self.assertEqual(2, self.task(published, 'design-title')['publishVersion'])
+        self.assertEqual(first['project']['revision'], published['project']['revision'])
+        self.assertEqual([], published['project']['liveDrafts'])
+        self.post('try', old_attempt, 409)
+        self.assertEqual([], self.state()['project']['liveDrafts'])
+        self.post('try', dict(old_attempt, baseVersion=2))
+        self.assertEqual('future', self.state()['project']['liveDrafts'][0]['value'])
 
     def test_pause_freezes_time_and_disallows_edits(self):
         self.create()
@@ -363,6 +644,200 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual('mint', after['project']['config']['theme'])
         self.assertEqual(self.task(before, 'design-theme')['ownerId'], self.task(after, 'design-theme')['ownerId'])
         self.assertEqual('done', self.task(after, 'design-theme')['status'])
+
+    def test_resume_full_room_keeps_identity_assignments_and_completed_work(self):
+        self.create(35)
+        self.start_build()
+        token = self.tokens[0]
+        before = self.state(token)
+        owned = before['self']['taskIds']
+        task = self.task(before, owned[0])
+        self.submit(task['id'], task['options'][0]['value'], token)
+        completed = self.state(token)
+        self.post('leave', dict(code=self.code, token=token))
+        self.assertEqual(34, self.state()['connectedCount'])
+        resumed = self.post('resume', dict(code=self.code, token=token))
+        self.assertEqual(dict(code=self.code, token=token), resumed)
+        after = self.state(token)
+        self.assertEqual(35, len(after['players']))
+        self.assertEqual(35, after['connectedCount'])
+        self.assertEqual(before['self']['id'], after['self']['id'])
+        self.assertEqual(before['self']['role'], after['self']['role'])
+        self.assertEqual(owned, after['self']['taskIds'])
+        self.assertEqual(completed['tasks'], after['tasks'])
+        self.assertEqual(completed['project'], after['project'])
+        self.assertEqual(completed['progress'], after['progress'])
+        self.assertTrue(after['self']['active'])
+        self.assertTrue(after['self']['connected'])
+
+    def test_presence_expires_without_heartbeat_and_does_not_discard_tasks(self):
+        self.create()
+        self.start_build()
+        original = self.state()
+        room = server.load(self.code)
+        for person in room['players'].values():
+            person['lastSeen'] = time.time() - server.PRESENCE_TIMEOUT - 1
+        server.save(room)
+        stale = self.state(self.host)
+        self.assertEqual(0, stale['connectedCount'])
+        self.assertTrue(all(person['active'] and not person['connected'] for person in stale['players']))
+        self.assertEqual(original['tasks'], stale['tasks'])
+        self.assertEqual(0, self.state()['connectedCount'])  # Spectators do not keep players alive.
+        online = self.state(self.tokens[0])
+        self.assertTrue(online['self']['connected'])
+        self.assertEqual(1, online['connectedCount'])
+        self.assertGreater(server.load(self.code)['players'][self.tokens[0]]['lastSeen'], time.time() - 2)
+        self.assertEqual(original['tasks'], online['tasks'])
+
+    def test_leave_is_idempotent_and_polling_cannot_undo_an_explicit_exit(self):
+        self.create()
+        self.start_build()
+        token = self.tokens[0]
+        original = self.state(token)
+        self.assertEqual(dict(ok=True), self.post('leave', dict(code=self.code, token=token)))
+        left = self.state(token)
+        self.assertFalse(left['self']['active'])
+        self.assertFalse(left['self']['connected'])
+        self.assertEqual(3, left['connectedCount'])
+        self.post('leave', dict(code=self.code, token=token))
+        self.assertEqual(left['events'], self.state(token)['events'])
+        self.assertEqual(original['self']['taskIds'], left['self']['taskIds'])
+        self.assertEqual(original['tasks'], left['tasks'])
+        self.post('resume', dict(code=self.code, token=token))
+        self.assertTrue(self.state(token)['self']['connected'])
+
+    def test_only_connected_players_count_toward_start_and_receive_initial_tasks(self):
+        self.create(5)
+        room = server.load(self.code)
+        for person in room['players'].values():
+            person['lastSeen'] = time.time() - server.PRESENCE_TIMEOUT - 1
+        ghost_id = room['players'][self.tokens[4]]['id']
+        server.save(room)
+        for token in self.tokens[:3]:
+            self.state(token)
+        self.assertEqual(3, self.state()['connectedCount'])
+        self.control('start', expected=409)
+        self.post('resume', dict(code=self.code, token=self.tokens[3]))
+        started = self.control('start')
+        self.assertEqual(4, started['connectedCount'])
+        self.assertEqual('working', started['status'])
+        self.assertEqual(0, next(person for person in started['players'] if person['id'] == ghost_id)['total'])
+        self.assertNotIn(ghost_id, [task['ownerId'] for task in started['tasks']])
+        self.assertEqual(4, len({task['ownerId'] for task in started['tasks']}))
+        # A backgrounded tab can return by its ordinary poll, without reloading or rejoining.
+        returned = self.state(self.tokens[4])
+        self.assertTrue(returned['self']['taskIds'])
+        self.assertEqual(ghost_id, returned['self']['id'])
+        repeated = self.state(self.tokens[4])
+        self.assertEqual(returned['self']['taskIds'], repeated['self']['taskIds'])
+        self.assertEqual(returned['tasks'], repeated['tasks'])
+        self.assertEqual(5, repeated['connectedCount'])
+
+    def test_resume_requires_private_token_and_public_state_never_exposes_it(self):
+        self.create()
+        token = self.tokens[0]
+        name = self.state(token)['self']['name']
+        self.post('leave', dict(code=self.code, token=token))
+        self.post('join', dict(code=self.code, name=name), expected=409)
+        for invalid in (None, {}, 'not-a-player-token', self.host):
+            with self.subTest(token_type=type(invalid).__name__):
+                self.post('resume', dict(code=self.code, token=invalid, name=name), expected=403)
+                self.post('leave', dict(code=self.code, token=invalid), expected=403)
+        self.assertFalse(self.state(token)['self']['active'])
+        self.post('resume', dict(code=self.code, token=token))
+        public = json.dumps(self.state())
+        for secret in self.tokens + [self.host, self.admin]:
+            self.assertNotIn(secret, public)
+        self.assertNotIn('lastSeen', public)
+
+    def test_teacher_removal_revokes_access_and_frees_work_without_resetting_it(self):
+        self.create(3)
+        joining = dict(code=self.code, name='Visszatérő', requestId='removed-join-once-123')
+        token = self.post('join', joining)['token']
+        self.start_build()
+        before = self.state(token)
+        player_id = before['self']['id']
+        self.submit('code-buttonTarget', 'signup')
+        self.probe('test-buttonTarget', token)
+        self.submit('test-buttonTarget', 'confirm', token)
+        completed = self.state()
+        self.post('control', dict(code=self.code, token=self.tokens[0], action='remove-player', playerId=player_id), expected=403)
+        removed = self.control('remove-player', playerId=player_id, requestId='remove-member-once-123')
+        self.assertEqual(3, len(removed['players']))
+        self.assertNotIn(player_id, [person['id'] for person in removed['players']])
+        self.assertEqual(completed['project'], removed['project'])
+        self.assertEqual(completed['progress'], removed['progress'])
+        for task in completed['tasks']:
+            current = self.task(removed, task['id'])
+            expected_owner = None if task['ownerId'] == player_id else task['ownerId']
+            self.assertEqual(expected_owner, current['ownerId'])
+            self.assertEqual(task['status'], current['status'])
+            self.assertEqual(task['value'], current['value'])
+        stored = server.load(self.code)
+        self.assertNotIn(token, stored['players'])
+        self.assertNotIn(token, stored['joinRequests'].values())
+        self.assertTrue(all(token not in task['probes'] for task in stored['tasks']))
+        self.post('resume', dict(code=self.code, token=token), expected=403)
+        self.post('leave', dict(code=self.code, token=token), expected=403)
+        self.assertNotIn('self', self.state(token))
+        self.probe('test-buttonTarget', token, expected=403)
+        self.assertEqual(removed['events'], self.control('remove-player', playerId=player_id, requestId='remove-member-once-123')['events'])
+        rejoined = self.post('join', joining)
+        self.assertNotEqual(token, rejoined['token'])
+        self.assertNotEqual(player_id, self.state(rejoined['token'])['self']['id'])
+
+    def test_returning_player_survives_backend_restart_with_saved_progress(self):
+        self.create()
+        self.start_build()
+        token = self.tokens[0]
+        before = self.state(token)
+        self.submit('design-theme', 'amber', token)
+        self.post('leave', dict(code=self.code, token=token))
+        env = dict(os.environ, DATA_PATH=server.DB_PATH)
+        script = ('import json,server; c=server.app.test_client(); '
+                  'r=c.post("/api/resume",json=' + repr(dict(code=self.code, token=token)) + '); '
+                  'assert r.status_code == 200, r.get_json(); '
+                  's=c.get("/api/state",query_string=' + repr(dict(code=self.code)) + ',headers='
+                  + repr(dict(Authorization='Bearer ' + token)) + '); print(json.dumps(s.get_json()))')
+        run = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True, env=env, check=True)
+        resumed = json.loads(run.stdout)
+        self.assertEqual(before['self']['id'], resumed['self']['id'])
+        self.assertEqual(before['self']['taskIds'], resumed['self']['taskIds'])
+        self.assertTrue(resumed['self']['connected'])
+        self.assertEqual('amber', resumed['project']['config']['theme'])
+        self.assertEqual('done', self.task(resumed, 'design-theme')['status'])
+
+    def test_concurrent_resume_creates_no_duplicate_player_or_assignment(self):
+        self.create()
+        self.start_build()
+        token = self.tokens[0]
+        original = self.state(token)
+        self.post('leave', dict(code=self.code, token=token))
+
+        def resume(_index):
+            with server.app.test_client() as client:
+                return self.post('resume', dict(code=self.code, token=token), client=client)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            resumed = list(executor.map(resume, range(8)))
+        self.assertTrue(all(result == dict(code=self.code, token=token) for result in resumed))
+        final = self.state(token)
+        self.assertEqual(4, len(final['players']))
+        self.assertEqual(original['self']['id'], final['self']['id'])
+        self.assertEqual(original['tasks'], final['tasks'])
+        self.assertEqual(4, final['connectedCount'])
+
+    def test_resume_cannot_reopen_closed_or_expired_groups(self):
+        self.create()
+        token = self.tokens[0]
+        self.post('leave', dict(code=self.code, token=token))
+        self.control('close')
+        self.post('resume', dict(code=self.code, token=token), expected=409)
+        self.assertFalse(self.state(token)['self']['active'])
+        room = server.load(self.code)
+        room['created'] = time.time() - server.TTL - 1
+        server.save(room)
+        self.post('resume', dict(code=self.code, token=token), expected=404)
 
     def test_database_survives_new_python_process(self):
         self.create()

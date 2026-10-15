@@ -16,7 +16,7 @@
   --space: clamp(16px, 2.2vw, 32px);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; height: 100%; height: var(--visible-height, 100dvh); min-height: 0; overflow: hidden; overscroll-behavior: none; }
+html, body { margin: 0; width: 100%; height: 100%; height: var(--visible-height, 100dvh); min-height: 0; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { display: flex; flex-direction: column; background: var(--canvas); color: var(--ink); font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
@@ -1056,3 +1056,213 @@ button.list-item:hover:not(:disabled) { border-color: var(--purple); background:
 .choice-sample.sample-photo { padding: 0; height: clamp(48px, 12vh, 106px); background: #eae5df; }
 .sample-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
 @media (max-height: 600px) { .choice-sample.sample-photo { height: 48px; } }
+
+/* Rejoining and teacher handling keep names and actions readable. */
+.presence { display: block; color: var(--mint); font-size: 14px; line-height: 1.35; }
+.person-away .presence { color: #ffce84; }
+.person-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.manage-person { min-height: 34px; padding: 5px 8px; font-size: 14px; }
+.person-modal { height: auto; max-width: 560px; }
+.person-details { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+.person-details p { margin: 0; font-size: 17px; line-height: 1.45; }
+.person-details h2 { font-size: 28px; }
+.resume-entry .secondary, .resume-entry .text-link { grid-column: 1 / -1; }
+@media (max-height: 620px) {
+  .person .role { display: none; }
+  .person-details { gap: 10px; padding: 14px; }
+  .person-details p { font-size: 15px; }
+  .person-details h2 { font-size: 23px; }
+}
+
+/* Rows keep their natural text height. Pagination, rather than a compressed
+   grid track, decides how many fit above the permanently reserved pager. */
+#team-content, #lobby-roster { overflow: hidden; }
+.task-list, .people-list { grid-auto-rows: max-content; align-content: start; align-items: start; overflow: hidden; }
+.task-list > .task-row, .people-list > .person { height: auto; align-self: start; }
+.task-list > .task-row { grid-template-rows: max-content max-content; align-content: start; }
+.task-row .task-title { min-width: 0; overflow-wrap: anywhere; }
+.task-row .role { overflow-wrap: anywhere; }
+.pager { position: relative; z-index: 1; background: var(--panel); }
+.manage-person { min-height: 44px; }
+.person .presence { overflow-wrap: anywhere; }
+.lobby-layout .people-list .list-item:nth-child(n+3),
+.credits-pane .people-list .list-item:nth-child(n+3) { display: grid; }
+@media (max-width: 700px) and (orientation: portrait) {
+  .lobby-layout .people-pane { height: 196px; max-height: 196px; }
+  .lobby-layout .people-list { flex: 1 1 0; }
+  .lobby-layout .people-list .person { padding: 7px; gap: 5px; }
+  .lobby-layout .people-list .person-controls { gap: 2px; }
+  .lobby-layout .people-list .manage-person { padding: 6px; }
+}
+
+/* A landscape phone needs the preview's height for the actual website.
+   Put the task and its buttons beside it, with a persistent way back. */
+@media (max-height: 460px) and (orientation: landscape) {
+  body:has(.player-preview) .app-header { display: none; }
+  .player-preview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(184px, 25vw, 216px);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+  }
+  .player-preview > .site-mount { grid-column: 1; grid-row: 1 / -1; height: 100%; }
+  .player-preview > .backbar { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: stretch; gap: 7px; min-width: 0; }
+  .player-preview > .backbar > button { align-self: flex-start; min-height: 44px; padding: 8px 10px; }
+  .player-preview > .backbar > strong { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+  .player-preview > .task-actions { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; min-height: 0; min-width: 0; padding-top: 9px; gap: 9px; }
+  .player-preview .task-actions > .button,
+  .player-preview .task-actions > .button:only-child { width: 100%; max-width: none; min-height: 44px; margin-top: auto; padding: 9px; font-size: 15px; }
+  .player-preview .test-instruction { font-size: 15px; line-height: 1.35; }
+  .player-preview .probe-result { gap: 5px; }
+  .player-preview .probe-result strong { font-size: 15px; line-height: 1.3; }
+  .player-preview .probe-result span { font-size: 14px; line-height: 1.3; }
+
+  /* Wider landscape phones still use one host pane at a time. */
+  .host-layout { display: flex; flex-direction: column; }
+  .host-layout > .project-pane { display: flex; flex: 1 1 0; }
+  .host-layout > .team-pane { display: none; }
+  .host-layout[data-view="team"] > .project-pane { display: none; }
+  .host-layout[data-view="team"] > .team-pane { display: flex; flex: 1 1 0; }
+  .host-screen:not(.lobby-screen) .session-top > div:first-child { display: none; }
+  .host-view-switch { display: flex; width: 190px; gap: 6px; }
+  .host-view-switch button { flex: 1; }
+  .host-screen:not(.lobby-screen) .session-top .session-controls { margin-right: 204px; }
+  .host-screen:has(.demo-pane) .session-top .session-controls { margin-right: 272px; }
+  .host-layout .team-tabs { right: 214px; width: 170px; }
+  .host-layout .group-cue { display: none; }
+  .host-layout .task-list, .host-layout .people-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .host-layout .task-row { padding: 7px 9px; }
+  .person-modal { width: min(800px, 100%); max-width: 800px; }
+  .person-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 5px 18px; padding: 10px 14px; }
+  .person-details > .eyebrow { grid-column: 1; grid-row: 1; }
+  .person-details > h2 { grid-column: 1; grid-row: 2; }
+  .person-details > p:first-of-type { grid-column: 1; grid-row: 3; }
+  .person-details > p:last-of-type { grid-column: 2; grid-row: 1 / 4; align-self: center; }
+  .person-details > button { grid-column: 1 / -1; grid-row: 4; min-height: 44px; }
+  .person-details p { font-size: 14px; line-height: 1.3; }
+}
+@media (max-height: 380px) and (orientation: landscape) {
+  :root { --header-height: 44px; }
+  .host-screen:not(.lobby-screen) .phase-strip { display: none; }
+  .player-preview { gap: 8px; padding-top: 6px; padding-bottom: 6px; }
+  .player-preview > .backbar { gap: 4px; }
+  .player-preview > .task-actions { padding-top: 6px; gap: 6px; }
+}
+
+/* The shared browser makes every new page and contribution visible. */
+.build-browser { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; min-width: 0; min-height: 48px; padding: 2px 10px; border-bottom: 1px solid var(--line); background: #101b2b; }
+.build-browser[hidden] { display: none; }
+.build-address { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9c9db; font: 14px / 1.3 Consolas, 'Courier New', monospace; }
+.build-page-button { min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid transparent; background: transparent; color: #c5d0e0; font-size: 14px; line-height: 1.25; }
+.build-page-button[aria-pressed="true"] { border-color: #436c71; background: #203d43; color: #adf4e5; }
+.build-page-button:hover:not(:disabled) { border-color: #597382; background: #263b4e; }
+.build-follow { flex: 0 0 auto; margin-left: auto; min-height: 44px; padding: 8px 10px; border-color: #41625f; background: #163835; color: #b0f3df; font-size: 14px; }
+.build-follow[aria-pressed="false"] { background: transparent; border-color: #52617a; color: #d2dbea; }
+.event-line.contribution-notice { display: flex; align-items: center; gap: 6px; min-height: 44px; color: #cfdee7; }
+.contribution-notice strong, .contribution-notice b { color: var(--mint); }
+.contribution-notice > span { min-width: 0; overflow-wrap: anywhere; }
+.team-tabs .primary:hover:not(:disabled) { color: #102b2a; }
+
+/* A choice changes the student's own working preview before publication. */
+.player-screen:has(.task-workbench) { max-width: 1180px; }
+.task-card.task-card-build { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.task-card-build > .task-heading { align-self: stretch; }
+.task-card-build > .task-heading h1 { margin: 5px 0 7px; font-size: clamp(22px, 2.5vw, 30px); }
+.task-workbench { flex: 1 1 0; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); gap: 18px; }
+.task-preview-box { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid #496375; border-radius: 9px; overflow: hidden; background: #0f1c2b; }
+.task-preview-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex: 0 0 auto; min-height: 32px; padding: 5px 10px; border-bottom: 1px solid #496375; font-size: 14px; line-height: 1.3; color: #e2edf4; }
+.task-preview-label > small { font-size: 14px; color: #a9c0d1; }
+.task-preview-box > .site-mount { flex: 1 1 0; }
+.task-editor { display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 0; gap: 12px; }
+.task-options { min-width: 0; min-height: 0; }
+.task-editor > .feedback { flex: 0 0 auto; min-height: 0; line-height: 1.3; }
+.task-editor > .task-actions { display: flex; flex: 0 0 auto; padding-top: 10px; }
+.task-editor > .task-actions > button { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; font-size: 16px; }
+.task-editor .choice-grid { gap: 8px; }
+.task-editor .choice-button { min-height: 88px; gap: 7px; padding: 10px; }
+.task-editor .choice-sample.sample-photo { height: 74px; }
+.task-editor .choice-grid:has(.sample-text) { grid-template-columns: 1fr; }
+.task-editor .choice-button:has(.sample-text) { min-height: 60px; padding: 10px; }
+.task-editor .code-block { padding: 12px; line-height: 1.4; }
+.task-editor .code-action { margin-top: 12px; }
+.modal-panel:has(.task-workbench) { width: min(1100px, 100%); height: min(760px, 100%); }
+
+@media (max-width: 900px) {
+  .build-browser { gap: 4px; padding-right: 5px; padding-left: 5px; }
+  .build-address { display: none; }
+  .build-page-button { flex: 1 1 0; padding: 7px 5px; }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .build-browser { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+  .build-follow { width: 100%; margin-left: 0; }
+  .player-screen:has(.task-workbench) { padding: 8px; gap: 6px; }
+  .player-screen:has(.task-workbench) .player-top { min-height: 34px; }
+  .task-card.task-card-build { gap: 8px; padding: 9px; }
+  .task-card-build > .task-heading h1 { margin: 3px 0 5px; font-size: 22px; line-height: 1.15; }
+  .task-card-build > .task-heading .task-hint { margin-top: 0; font-size: 14px; line-height: 1.3; }
+  .task-workbench { display: flex; flex-direction: column; gap: 8px; }
+  .task-preview-box { flex: 1 1 0; min-height: 150px; }
+  .task-preview-label { min-height: 28px; padding: 4px 7px; }
+  .task-editor { flex: 0 0 auto; gap: 6px; }
+  .task-editor .choice-grid, .task-editor .choice-grid:has(.sample-text) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .task-editor .choice-grid:has(> :nth-child(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .task-editor .choice-button, .task-editor .choice-button:has(.sample-text) { min-height: 62px; gap: 4px; padding: 6px; font-size: 14px; }
+  .task-editor .choice-grid:has(.sample-text) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-editor .choice-grid:has(.sample-text) > :nth-child(3):last-child { grid-column: 1 / -1; }
+  .task-editor .choice-button:has(.sample-text) { min-height: 44px; padding: 7px 8px; }
+  .task-editor .choice-button > span:last-child, .task-editor .choice-button > b { font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+  .task-editor .choice-sample { min-height: 24px; padding: 4px; }
+  .task-editor .choice-sample.sample-photo { height: 44px; padding: 0; }
+  .task-editor .sample-theme i, .task-editor .sample-theme span { height: 20px; }
+  .task-editor .sample-button { padding: 4px 7px; font-size: 14px; }
+  .task-editor .code-block { padding: 8px; font-size: 14px; line-height: 1.3; }
+  .task-editor .code-event { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px; }
+  .task-editor .code-action { margin-top: 7px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 7px; }
+  .task-editor .code-action select { min-height: 44px; padding: 7px; font-size: 16px; }
+  .task-editor > .task-actions { padding-top: 6px; }
+  .task-editor > .task-actions > button { padding: 8px; }
+  .player-screen:has(.task-workbench) .player-task-nav { gap: 4px; }
+  .player-screen:has(.task-workbench) .player-task-nav button { min-height: 44px; padding: 7px; }
+}
+@media (max-width: 700px) and (max-height: 620px) and (orientation: portrait) {
+  body:has(.task-workbench) .app-header { display: none; }
+  .player-screen:has(.task-workbench) .player-top { min-height: 30px; }
+  .task-card-build > .task-heading h1 { font-size: 21px; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  body:has(.task-workbench) .app-header { display: none; }
+  .player-screen:has(.task-workbench) { max-width: none; padding: 6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left)); gap: 5px; }
+  .task-card.task-card-build { display: grid; grid-template-columns: minmax(0, 1fr) clamp(245px, 36vw, 320px); grid-template-rows: auto minmax(0, 1fr); gap: 8px 12px; padding: 8px; }
+  .task-card.task-card-build:has(.sample-theme) { grid-template-columns: minmax(0, 1fr) clamp(280px, 40vw, 320px); }
+  .task-card-build > .task-heading { grid-column: 2; grid-row: 1; align-self: stretch; }
+  .task-card-build > .task-heading h1 { margin: 2px 0 4px; font-size: 21px; line-height: 1.15; }
+  .task-card-build > .task-heading .task-hint { margin: 0; font-size: 14px; line-height: 1.25; }
+  .task-workbench { display: contents; }
+  .task-preview-box { grid-column: 1; grid-row: 1 / -1; }
+  .task-preview-label { min-height: 28px; padding: 4px 7px; }
+  .task-editor { grid-column: 2; grid-row: 2; gap: 6px; justify-content: space-between; }
+  .task-editor .choice-grid, .task-editor .choice-grid:has(.sample-text) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .task-editor .choice-grid:has(> :nth-child(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .task-editor .choice-button, .task-editor .choice-button:has(.sample-text) { min-height: 64px; padding: 5px; gap: 4px; font-size: 14px; }
+  .task-editor .choice-grid:has(.sample-text) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-editor .choice-grid:has(.sample-text) > :nth-child(3):last-child { grid-column: 1 / -1; }
+  .task-editor .choice-button:has(.sample-text) { min-height: 44px; padding: 6px; }
+  .task-editor .choice-button > span:last-child, .task-editor .choice-button > b { font-size: 14px; line-height: 1.2; overflow-wrap: anywhere; }
+  .task-editor .choice-sample { min-height: 22px; padding: 3px; }
+  .task-editor .choice-sample.sample-photo { height: 40px; padding: 0; }
+  .task-editor .sample-theme i, .task-editor .sample-theme span { height: 18px; }
+  .task-editor .sample-button { padding: 3px 5px; font-size: 14px; }
+  .task-editor .code-block { padding: 7px; font-size: 14px; line-height: 1.25; }
+  .task-editor .code-event { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px; }
+  .task-editor .code-action { margin-top: 5px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 5px; }
+  .task-editor .code-action select { min-height: 44px; padding: 6px; font-size: 14px; }
+  .task-editor > .task-actions { padding-top: 5px; }
+  .task-editor > .task-actions > button { padding: 8px; font-size: 15px; }
+  .modal-panel:has(.task-workbench) .modal-head { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+  .build-browser { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+}
+@media (max-height: 380px) and (orientation: landscape) {
+  .player-screen:has(.task-workbench) > .player-top { display: none; }
+  .task-card.task-card-build { column-gap: 8px; }
+}

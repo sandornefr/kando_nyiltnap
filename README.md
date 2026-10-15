@@ -21,11 +21,19 @@ A négy projektszakasz automatikusan vált. A tanár bármikor szüneteltethet m
 
 **Közös projekt: 4–35 fő.** A tervező, fejlesztő és tesztelő szerepet a rendszer osztja ki. Egy ember legfeljebb két feladatért felel. Négy főnél hat, 35 főnél 36 részfeladat van. A későn csatlakozó is kap feladatot, de a már befejezett munkát nem veszi el mástól.
 
-**Vezetett bemutató: egyedül is.** A tanári kezdőlapon a „Kipróbálom egyedül” gombot válaszd. Nem kell hozzá másik telefon vagy résztvevő. A bemutató mindig a következő feladatot kínálja: szín és cím választása → gomb és űrlap működése → a két működés kipróbálása. Nincs visszaszámlálás és automatikus továbblépés, a tanár a saját tempójában halad. Hibás működés jelzése után a vezetés a javításhoz, majd az újabb próbához visz. A teljes feladatlista is elérhető. Legfeljebb három résztvevő ebben a módban is csatlakozhat, de nem szükséges. Ez a B terv akkor is működik, ha senki sem csatlakozik.
+**Vezetett bemutató: egyedül is.** A tanári kezdőlapon a „Kipróbálom egyedül” gombot válaszd. Nem kell hozzá másik telefon vagy résztvevő. Mind a 36 feladat elérhető: az üres oldaltól a képeken, szolgáltatásokon és foglalón át a kipróbálásig. A vezetés mindig a következő elvégezhető feladatot kínálja. Nincs visszaszámlálás és automatikus továbblépés, a tanár a saját tempójában halad. Hibás működés jelzése után a vezetés a javításhoz, majd az újabb próbához visz. A teljes feladatlista is elérhető. Legfeljebb három résztvevő ebben a módban is csatlakozhat, de nem szükséges. Ez a B terv akkor is működik, ha senki sem csatlakozik.
 
 Az **Útmutató** gomb három rövid, lapozható képernyőn mutatja meg a tanár, a diákok és a kivetítő szerepét. A csoportos munka alatt a „Most te” sáv jelzi a tanári teendőt; az oldalsáv jelzi, hogy a diákok a telefonjukon dolgoznak. A csoportot legalább négy csatlakozóval lehet indítani.
 
 A tervezési választások mind érvényesek. A működésbeli hibát a tesztelő a közös oldal kipróbálásával fedezheti fel, és rövid segítséget küldhet vissza a felelősnek. A javítás után új ellenőrzés szükséges. A próbaűrlap csak a böngészőben működik: nem valódi időpontkérés, az oda írt adatot nem küldi el és nem menti.
+
+## Élőben épülő webhely
+
+A munka üres webhellyel kezdődik. A **Főoldal**, **Szolgáltatások** és **Időpontkérés** külön nézet: a cím, kép, kártya és gomb csak az adott hozzájárulásból jelenik meg. Egy bekötött gomb már átvihet egy még üres oldalra; a foglaló később kerül oda.
+
+A diák a saját feladatánál azonnal látja a választása eredményét. A kivetítőn ezek a **még nem rögzített próbák** is megjelennek a készítő nevével, több próbálkozó esetén váltakozva. A **Kiteszem a közös oldalra** gomb rögzíti a hozzájárulást. Az új rész rövid kiemelést kap; a többiek munkáját nem írja felül.
+
+Az **Élő követés** az éppen épülő részhez, illetve a tesztelő által megnyitott oldalhoz viszi a kivetítőt. A tanár kikapcsolhatja a követést vagy kézzel választhat oldalt, majd a **Követés indítása** gombbal visszatérhet az élő nézethez. Ez csak a megjelenítést állítja meg; a csoport idejét a külön szünetgomb állítja meg. A tesztelő csak az elkészült, a próbához szükséges részek után dolgozhat: például a kutyaszámláló próbájához az űrlapnak is el kell készülnie. A megnyitott telefonos oldal és a beírt próbaadat nem ugrik vissza, amikor más hozzájárulás érkezik.
 
 ## Közös megbízás és záró kódnézet
 
@@ -43,7 +51,11 @@ A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja
 
 A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A telefonos rendszerbillentyűzet átmenetileg csökkentheti a hasznos magasságot; az űrlap kitöltése után zárd be.
 
-Frissítéskor az adott böngészőlapon megmarad a csatlakozás. A szüneteltetést a tanár kezeli; az internetkapcsolat átmeneti megszakadása nem törli a szerveren mentett munkát. A tényleges rendezvény előtt a helyszíni Wi-Fi-n és a használt iPadeken is érdemes főpróbát tartani.
+A játékos belépése ugyanazon az eszközön és böngészőben lapbezárás után is megmarad, legfeljebb 24 óráig. Újranyitáskor ugyanaz a név, szerep és mentett munka tér vissza. A „Kilépek a csoportból” gomb jelzi a távozást a tanárnak, utána a „Folytatom a játékom” gombbal vissza lehet lépni. Másik csoport kódja nem keveri össze a belépéseket. A tanári jogosultság továbbra is csak az adott böngészőlapon tárolódik.
+
+A **Csapat → Kezelés → Eltávolítom a csoportból** gomb felszabadítja az eltávozott résztvevő helyét és becenevét. Folyamatban lévő játéknál a feladatait a tanár veszi át; az elkészült oldal és feladatállapot megmarad. A korábbi belépése visszavonódik. A „Nincs kapcsolat” jelzés kb. 30 másodperc kimaradás után jelenik meg, önmagában nem töröl senkit. A kezdéshez négy valóban kapcsolódó játékos kell. Másik eszközön, törölt böngészőadatokkal vagy már elveszett régi belépésnél a tanár felszabadíthatja a nevet; pusztán a becenév beírása nem veheti át más játékát.
+
+A szüneteltetést a tanár kezeli; az internetkapcsolat átmeneti megszakadása nem törli a szerveren mentett munkát. A tényleges rendezvény előtt a helyszíni Wi-Fi-n és a használt iPadeken is érdemes főpróbát tartani.
 
 ## Telepítés
 
@@ -61,3 +73,5 @@ Alapértelmezett `PUBLIC_URL`: `https://sandornefr.github.io/kando_nyiltnap/`. M
 Python 3.12, `pip install -r requirements.txt`, majd `python server.py`. Alapértelmezett port: 8771. Állíts be helyi `TEACHER_PASSWORD` és `PUBLIC_URL=http://localhost:8771/` változót. Localhoston a felület automatikusan a helyi API-t használja. A szerver privát fájlokat nem szolgál ki.
 
 Az API integrációs ellenőrzései: `python -m unittest -v test_backend.py`. Ezek a GitHub Pages közzététele előtt automatikusan is lefutnak, külön ideiglenes adatbázisban. A tesztek nem használják az éles tanári jelszót vagy csoportadatokat.
+
+A böngészős munkamenet és az épülő mintaoldal ellenőrzései: `node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs`. A közzététel ezeket is futtatja.

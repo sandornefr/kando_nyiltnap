@@ -12,7 +12,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, request, send_from_directory
-from project import DEFAULTS, PHASES, ROLE_LABELS, CATALOGUE, assign, check, new_tasks
+from project import (DEFAULTS, PHASES, ROLE_LABELS, CATALOGUE, PROJECT_VIEWS,
+                     PUBLICATION_LABELS, assign, check, new_tasks, task_dependencies)
 
 ROOT = Path(__file__).parent
 app = Flask(__name__, static_folder=None)
@@ -30,6 +31,8 @@ ALLOWED_ORIGINS.add(urlsplit(PUBLIC_URL).scheme + '://' + urlsplit(PUBLIC_URL).n
 ADMINS = {}
 LIMITS = {}
 TTL = 86400
+PRESENCE_TIMEOUT = 30
+HEARTBEAT_INTERVAL = 10
 
 
 def error(message, status=400):
@@ -55,12 +58,25 @@ def load(code):
     if room.get('created', 0) < time.time() - TTL:
         return None
     if room.get('schema') == 2:
+        # Existing groups get a one-time grace period, not a fresh one on every poll.
+        migrated = False
+        for person in room['players'].values():
+            if 'active' not in person:
+                person['active'] = True
+                migrated = True
+            if 'lastSeen' not in person:
+                person['lastSeen'] = time.time()
+                migrated = True
+        if migrated:
+            save(room)
         # Copy changes also reach active rooms without resetting any task progress.
         catalogue = {task['id']: task for task in CATALOGUE}
+        available = {task['id'] for task in room['tasks']}
         for task in room['tasks']:
             current = catalogue.get(task['id'])
             if current:
                 task.update({key: current[key] for key in ('title', 'hint', 'options')})
+                task['dependsOn'] = task_dependencies(current, available)
         update(room)
     return room
 
@@ -74,10 +90,38 @@ def save(room):
             db.execute('INSERT OR REPLACE INTO rooms VALUES (?,?)', values)
 
 
-def event(room, text):
+def event(room, text, **details):
     room['eventSequence'] += 1
-    room['events'].append(dict(id=room['eventSequence'], text=text))
+    item = dict(id=room['eventSequence'], text=text, **details)
+    room['events'].append(item)
     room['events'] = room['events'][-40:]
+    return item
+
+
+def project_change(room, task, actor, kind, label):
+    details = dict(key=task['key'], taskId=task['id'], actor=actor,
+                   label=label, view=PROJECT_VIEWS.get(task['key'], 'home'),
+                   kind=kind, revision=room['project']['revision'])
+    item = event(room, actor + ' · ' + label, **details)
+    room['project']['lastChange'] = dict(details, eventId=item['id'])
+
+
+def live_drafts(room, now):
+    """Only authorized, still-live drafts are public; baseline work is separate."""
+    if room['status'] != 'working' or room['phase'] not in ('build', 'review') or room['pause'] is not None:
+        return {}
+    people = {person['id']: person for person in room['players'].values()}
+    tasks = {task['id']: task for task in room['tasks']}
+    valid = {}
+    for actor_id, draft in room.get('liveDrafts', {}).items():
+        task = tasks.get(draft.get('taskId'))
+        person = people.get(actor_id)
+        if (now - draft.get('at', 0) >= 15 or not task or task['kind'] == 'test'
+                or (actor_id != 'host' and (not person or not person.get('active', True)
+                                           or task['ownerId'] != actor_id))):
+            continue
+        valid[actor_id] = draft
+    return valid
 
 
 def advance(room, at):
@@ -112,6 +156,14 @@ def task_status(task, tasks):
     return 'issue' if task['issue'] else 'ready'
 
 
+def connected(person, now=None):
+    return person.get('active', True) and (time.time() if now is None else now) - person.get('lastSeen', 0) <= PRESENCE_TIMEOUT
+
+
+def assign_present(room):
+    assign(room, [person for person in room['players'].values() if connected(person)])
+
+
 def public(room, player=None, host=False):
     phase_index = next(index for index, phase in enumerate(PHASES) if phase['id'] == room['phase'])
     automatic = room['mode'] != 'demo'
@@ -124,27 +176,40 @@ def public(room, player=None, host=False):
     for task in room['tasks']:
         item = {key: task[key] for key in ('id', 'title', 'role', 'kind', 'key', 'options', 'dependsOn', 'ownerId', 'value', 'hint')}
         item.update(ownerName=people.get(task['ownerId'], {}).get('name', 'Tanár'),
-                    status=task_status(task, tasks), issue=task['issue'], roleLabel=ROLE_LABELS[task['role']])
+                    status=task_status(task, tasks), issue=task['issue'], roleLabel=ROLE_LABELS[task['role']],
+                    publishVersion=task.get('publishVersion', 0))
         task_data.append(item)
     players = []
+    now = time.time()
     for person in sorted(room['players'].values(), key=lambda item: item['order']):
         owned = [task for task in room['tasks'] if task['ownerId'] == person['id']]
         players.append(dict(id=person['id'], name=person['name'], avatar=person['avatar'], role=person['role'],
                             roleLabel=ROLE_LABELS[person['role']], done=sum(task['done'] for task in owned),
-                            total=len(owned), me=person is player))
+                            total=len(owned), me=person is player,
+                            active=person.get('active', True), connected=connected(person, now)))
     session_remaining = remaining + sum(phase['duration'] for phase in PHASES[phase_index + 1:]) if automatic and room['status'] == 'working' else 0
     data = dict(schema=2, code=room['code'], status=room['status'], phase=room['phase'],
                 phaseLabel=PHASES[phase_index]['label'], phases=PHASES, remaining=round(remaining),
                 sessionRemaining=round(session_remaining), paused=room['pause'] is not None,
                 mode=room['mode'], automatic=automatic, limit=35, minPlayers=4, joinUrl=room['joinUrl'], players=players,
+                connectedCount=sum(person['connected'] for person in players),
                 presentation=room.get('presentation'),
-                project=dict(config=dict(room['project']['config']), revision=room['project']['revision']),
+                project=dict(config=dict(room['project']['config']), revision=room['project']['revision'],
+                             builtKeys=[task['key'] for task in room['tasks']
+                                        if task['kind'] != 'test' and task.get('value') is not None],
+                             lastChange=room['project'].get('lastChange'),
+                             liveDrafts=sorted(live_drafts(room, now).values(), key=lambda draft: draft['id'], reverse=True),
+                             liveTest=room['project'].get('liveTest') if
+                             room['status'] == 'working' and room['phase'] in ('build', 'review')
+                             and room['pause'] is None
+                             and now - room['project'].get('liveTest', {}).get('at', 0) < 5 else None),
                 tasks=task_data, events=list(room['events']),
                 progress=dict(done=sum(task['done'] for task in room['tasks']), total=len(room['tasks'])),
                 brief='A Tücsök Kutyakozmetika nyilvános Facebook-oldala alapján készítünk tanulói weboldaltervet. Mutassuk be a Fürdetés és a Teljes kozmetika szolgáltatást, az elérhetőségeket és a bejelentkezés alapján működő szalont. A bemutató időpontfoglalóhoz kitalált kutyanevet és időpontokat használunk; adatot nem küldünk, valódi foglalás nem történik.')
     if player:
         data['self'] = dict(id=player['id'], name=player['name'], avatar=player['avatar'], role=player['role'],
-                            roleLabel=ROLE_LABELS[player['role']], taskIds=[task['id'] for task in room['tasks'] if task['ownerId'] == player['id']])
+                            roleLabel=ROLE_LABELS[player['role']], active=player.get('active', True), connected=connected(player, now),
+                            taskIds=[task['id'] for task in room['tasks'] if task['ownerId'] == player['id']])
     if host:
         data['host'] = True
     return data
@@ -193,6 +258,8 @@ def edit_context(data):
     player, host = identity(room, data.get('token'))
     if not player and not host:
         return None, None, None, None, error('Csatlakozz a csoporthoz!', 403)
+    if player and not player.get('active', True):
+        return None, None, None, None, error('Folytasd a korábbi belépésedet, hogy újra dolgozhass!', 409)
     task_id = data.get('taskId')
     task = next((item for item in room['tasks'] if item['id'] == task_id), None) if isinstance(task_id, str) else None
     if task is None:
@@ -303,9 +370,9 @@ def create():
         code = str(secrets.randbelow(900000) + 100000)
     room = dict(schema=2, code=code, host=secrets.token_urlsafe(32), players={}, status='lobby',
                 phase='brief', mode=mode, pause=None, deadline=0, presentation=None, joinUrl=PUBLIC_URL, created=time.time(),
-                project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(6), events=[], eventSequence=0,
+                project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(len(CATALOGUE) if mode == 'demo' else 6), events=[], eventSequence=0,
                 joinRequests={}, controlRequests=[], createRequest=digest)
-    event(room, 'A Tücsök Kutyakozmetika tanulói próbaoldala készen áll az ötleteitekre.')
+    event(room, 'Üres oldalból indulunk. A Tücsök weboldalát ti építitek fel.')
     save(room)
     return jsonify(code=code, token=room['host'])
 
@@ -318,6 +385,17 @@ def state():
         return failed
     token = request.headers.get('Authorization', '').removeprefix('Bearer ')
     player, host = identity(room, token)
+    if player and player.get('active', True):
+        changed = False
+        if time.time() - player.get('lastSeen', 0) >= HEARTBEAT_INTERVAL:
+            player['lastSeen'] = time.time()
+            changed = True
+        # A backgrounded tab can return by polling, without reloading or resuming.
+        if room['status'] == 'working' and room['phase'] in ('brief', 'build', 'review'):
+            if not any(task['ownerId'] == player['id'] for task in room['tasks']):
+                changed = assign_late(room, player) or changed
+        if changed:
+            save(room)
     return jsonify(public(room, player, host))
 
 
@@ -338,6 +416,52 @@ def assign_late(room, person):
     return True
 
 
+def resume_person(room, person):
+    person.update(active=True, lastSeen=time.time())
+    if room['status'] == 'lobby':
+        assign_present(room)
+    elif room['status'] == 'working' and room['phase'] != 'handover':
+        if not any(task['ownerId'] == person['id'] for task in room['tasks']):
+            assign_late(room, person)
+
+
+@app.post('/api/resume')
+@locked
+def resume():
+    data = request.json
+    room, failed = room_for(data.get('code'))
+    if failed:
+        return failed
+    person, _host = identity(room, data.get('token'))
+    if not person:
+        return error('Ez a korábbi belépés már nem használható. Csatlakozz újra, vagy szólj a tanárnak!', 403)
+    if room['status'] == 'closed':
+        return error('A tanár lezárta ezt a csoportot. Csatlakozz az új csoporthoz!', 409)
+    resume_person(room, person)
+    save(room)
+    return jsonify(code=room['code'], token=data['token'])
+
+
+@app.post('/api/leave')
+@locked
+def leave():
+    data = request.json
+    room, failed = room_for(data.get('code'))
+    if failed:
+        return failed
+    person, _host = identity(room, data.get('token'))
+    if not person:
+        return error('Nincs ilyen belépés ebben a csoportban.', 403)
+    if person.get('active', True):
+        person['active'] = False
+        room.get('liveDrafts', {}).pop(person['id'], None)
+        if room['status'] == 'lobby':
+            assign_present(room)
+        event(room, person['name'] + ' kilépett. A korábbi belépésével folytathatja.')
+        save(room)
+    return jsonify(ok=True)
+
+
 @app.post('/api/join')
 @locked
 def join():
@@ -349,7 +473,15 @@ def join():
     if failed:
         return failed
     if key and key in room['joinRequests']:
-        return jsonify(token=room['joinRequests'][key], code=room['code'])
+        existing_token = room['joinRequests'][key]
+        person = room['players'].get(existing_token)
+        if person:
+            if room['status'] == 'closed':
+                return error('A tanár lezárta ezt a csoportot. Csatlakozz az új csoporthoz!', 409)
+            resume_person(room, person)
+            save(room)
+            return jsonify(token=existing_token, code=room['code'])
+        room['joinRequests'].pop(key, None)
     if room['status'] not in ('lobby', 'working') or room['phase'] == 'handover':
         return error('Ez a csoport már a bemutatónál tart vagy lezárult. Várd meg az új csoportot!', 409)
     name = data.get('name', '')
@@ -359,7 +491,7 @@ def join():
     if not name:
         return error('Válassz egy becenevet!')
     if any(person['name'].casefold() == name.casefold() for person in room['players'].values()):
-        return error('Ez a becenév már foglalt.', 409)
+        return error('Ez a becenév már bent van. A korábbi eszközön válaszd a folytatást; ha nem megy, a tanár törölheti a régi belépést.', 409)
     limit = 3 if room['mode'] == 'demo' else 35
     if len(room['players']) >= limit:
         return error('A bemutató mód legfeljebb 3 résztvevős.' if room['mode'] == 'demo' else 'A csoport megtelt (35 fő).', 409)
@@ -367,12 +499,14 @@ def join():
     avatar = data.get('avatar', 0)
     if type(avatar) is not int or not 0 <= avatar < 6:
         avatar = 0
-    person = dict(id=secrets.token_hex(8), name=name, avatar=avatar, order=len(room['players']), role='designer')
+    person = dict(id=secrets.token_hex(8), name=name, avatar=avatar,
+                  order=max((item['order'] for item in room['players'].values()), default=-1) + 1,
+                  role='designer', active=True, lastSeen=time.time())
     if room['status'] == 'working' and not assign_late(room, person):
         return error('Már minden hozzájárulás elkészült. Csatlakozz a közös bemutatóhoz!', 409)
     room['players'][token] = person
     if room['status'] == 'lobby':
-        assign(room)
+        assign_present(room)
     if key:
         room['joinRequests'][key] = token
     event(room, name + ' csatlakozott a csapathoz.')
@@ -396,7 +530,22 @@ def control():
     if key and key in room['controlRequests']:
         return jsonify(public(room, host=True))
     action = data.get('action')
-    if action in ('code-html', 'code-css', 'code-javascript', 'code-path', 'code-close'):
+    if action == 'remove-player':
+        player_id = data.get('playerId')
+        removed_token = next((token for token, person in room['players'].items() if person['id'] == player_id), None) if isinstance(player_id, str) else None
+        if removed_token is None:
+            return error('Ez a résztvevő már nincs a csoportban.', 404)
+        removed = room['players'].pop(removed_token)
+        room.get('liveDrafts', {}).pop(player_id, None)
+        room['joinRequests'] = {key: token for key, token in room['joinRequests'].items() if token != removed_token}
+        for task in room['tasks']:
+            if task['ownerId'] == player_id:
+                task['ownerId'] = None
+            task.get('probes', {}).pop(removed_token, None)
+        if room['status'] == 'lobby':
+            assign_present(room)
+        event(room, removed['name'] + ' kikerült a csoportból. A megmaradt munkáját a tanár folytathatja.')
+    elif action in ('code-html', 'code-css', 'code-javascript', 'code-path', 'code-close'):
         if room['status'] not in ('working', 'finished') or (room['phase'] != 'handover' and room['status'] != 'finished'):
             return error('A kódot a közös bemutatónál vagy a lezárás után mutathatod meg.', 409)
         if action == 'code-close':
@@ -407,8 +556,9 @@ def control():
         else:
             room['presentation'] = dict(tab=action.removeprefix('code-'), path=False)
     elif action in ('start', 'next') and room['status'] == 'lobby':
-        if room['mode'] != 'demo' and len(room['players']) < 4:
-            return error('A csoportos módhoz legalább 4 résztvevő kell. Kisebb létszámhoz indíts bemutató módot!', 409)
+        if room['mode'] != 'demo' and sum(connected(person) for person in room['players'].values()) < 4:
+            return error('A csoportos módhoz legalább 4 jelen lévő résztvevő kell. Kisebb létszámhoz indíts bemutató módot!', 409)
+        assign_present(room)
         room['status'] = 'working'
         room['phase'] = 'brief'
         room['deadline'] = time.time() + PHASES[0]['duration'] if room['mode'] != 'demo' else 0
@@ -463,7 +613,14 @@ def submit_task():
         return error('Válassz a feladat lehetőségei közül!')
     actor = 'A tanár' if host else player['name']
     if task['kind'] != 'test':
-        changed = room['project']['config'][task['key']] != value
+        # A publication ends all preceding draft attempts even when its value
+        # is unchanged. This generation is separate from the visual revision.
+        task['publishVersion'] = task.get('publishVersion', 0) + 1
+        room['liveDrafts'] = {actor_id: draft for actor_id, draft in room.get('liveDrafts', {}).items()
+                              if draft.get('taskId') != task['id']}
+        # Choosing the preset is still the first actual publication. A test
+        # report reopens work without removing that published element.
+        changed = task.get('value') is None or room['project']['config'][task['key']] != value
         was_done = task['done']
         if changed:
             room['project']['config'][task['key']] = value
@@ -473,7 +630,7 @@ def submit_task():
             for dependent in room['tasks']:
                 if task['id'] in dependent['dependsOn']:
                     dependent.update(done=False, issue=None, value=None, probes={})
-            event(room, actor + ' elkészítette: ' + task['title'])
+            project_change(room, task, actor, 'publish', PUBLICATION_LABELS[task['key']])
     else:
         if value == 'confirm' and task['done']:
             return jsonify(public(room, player, host))
@@ -489,16 +646,46 @@ def submit_task():
             if not probe['passed']:
                 return error('Az ellenőrzés javítandó működést talált. Kérj javítást, majd próbáld újra!', 409)
             task.update(done=True, issue=None, value='confirm')
-            event(room, actor + ' ellenőrizte: ' + task['title'])
+            project_change(room, task, actor, 'test-pass', 'Ellenőrizve: ' + task['title'])
         else:
             if probe['passed']:
                 return error('Ez az ellenőrzés megfelelő működést látott. Jóváhagyhatod az eredményt.', 409)
             task.update(done=False, issue=probe['hint'], value='report')
             for dependency in task['dependsOn']:
                 dependencies[dependency].update(done=False, issue=probe['hint'])
-            event(room, actor + ' segítséget küldött a javításhoz: ' + probe['hint'])
+            project_change(room, task, actor, 'test-report', 'Javításra visszaküldve: ' + task['title'])
     save(room)
     return jsonify(public(room, player, host))
+
+
+@app.post('/api/try')
+@locked
+def try_task():
+    """Share the selected option before publication, without completing work."""
+    data = request.json
+    room, task, player, host, failed = edit_context(data)
+    if failed:
+        return failed
+    if task['kind'] == 'test':
+        return error('Élő változatot alkotófeladatnál próbálhatsz ki.', 409)
+    if set(data) - {'code', 'token', 'taskId', 'value', 'baseValue', 'baseVersion'}:
+        return error('Csak a feladat választott lehetőségét küldd!')
+    if ('baseValue' not in data or data['baseValue'] != task.get('value')
+            or type(data.get('baseVersion')) is not int
+            or data['baseVersion'] != task.get('publishVersion', 0)):
+        return error('Közben frissült a feladat. Próbáld ki az aktuális változaton!', 409)
+    value = data.get('value')
+    if not isinstance(value, str) or value not in [option['value'] for option in task['options']]:
+        return error('Válassz a feladat lehetőségei közül!')
+    now = time.time()
+    actor_id = 'host' if host else player['id']
+    room['liveDrafts'] = live_drafts(room, now)
+    room['draftSequence'] = room.get('draftSequence', 0) + 1
+    room['liveDrafts'][actor_id] = dict(id=room['draftSequence'], key=task['key'], value=value,
+        view=PROJECT_VIEWS.get(task['key'], 'home'), actor='A tanár' if host else player['name'],
+        taskId=task['id'], at=now)
+    save(room)
+    return jsonify(ok=True)
 
 
 @app.post('/api/probe')
@@ -519,6 +706,46 @@ def probe_task():
     return jsonify(**result, revision=room['project']['revision'], state=public(room, player, host))
 
 
+@app.post('/api/preview-action')
+@locked
+def preview_action():
+    """Broadcast a tester's UI action, never the text entered into the form."""
+    data = request.json
+    room, task, player, host, failed = edit_context(data)
+    if failed:
+        return failed
+    if task['kind'] != 'test':
+        return error('Élő próbát ellenőrző feladathoz indíthatsz.', 409)
+    tasks = {item['id']: item for item in room['tasks']}
+    if any(not tasks[key]['done'] for key in task['dependsOn']):
+        return error('Előbb készüljön el a kipróbálandó rész!', 409)
+    if set(data) - {'code', 'token', 'taskId', 'action', 'view', 'result'}:
+        return error('Az élő próbához csak műveletet és oldalt küldj!')
+    action = data.get('action')
+    view = data.get('view')
+    result = data.get('result')
+    if not isinstance(action, str) or action not in {'cta', 'nav', 'program', 'choose', 'filter', 'menu', 'counter', 'submit', 'back'}:
+        return error('Nincs ilyen próbaművelet.')
+    if not isinstance(view, str) or view not in {'home', 'programs', 'signup', 'contact', 'credits'}:
+        return error('Nincs ilyen próbaoldal.')
+    allowed_results = {'open', 'closed', 'success', 'error', 'empty', 'blocked', 'bath', 'full', 'all', 'selected', 'available', 'busy'}
+    if result is not None and not (isinstance(result, str) and result in allowed_results) and not (type(result) in (int, float) and 0 <= result <= 100):
+        return error('Az élő próba eredménye nem tartalmazhat beírt szöveget.')
+    now = time.time()
+    actor_id = 'host' if host else player['id']
+    # Drop bursts harmlessly; rapid clicking must not flood projector updates.
+    last_at = room.setdefault('previewActionTimes', {}).get(actor_id, 0)
+    if now - last_at < .25:
+        return jsonify(ok=True)
+    room['previewActionTimes'][actor_id] = now
+    room['previewSequence'] = room.get('previewSequence', 0) + 1
+    room['project']['liveTest'] = dict(id=room['previewSequence'],
+        actor='A tanár' if host else player['name'], taskId=task['id'],
+        view=view, action=action, result=result, at=now)
+    save(room)
+    return jsonify(ok=True)
+
+
 @app.post('/api/answer')
 def retired_answer():
     return error('A régi játék lezárult. Nyiss új Kódlabor-csoportot!', 410)
@@ -531,7 +758,7 @@ def index():
 
 @app.get('/<name>')
 def asset(name):
-    if name not in ('index.html', 'style.css', 'app.js', 'config.js', 'viewport.js', 'site.js'):
+    if name not in ('index.html', 'style.css', 'app.js', 'config.js', 'viewport.js', 'site.js', 'player-session.js'):
         return error('Nincs ilyen oldal.', 404)
     return send_from_directory(ROOT, name)
 
