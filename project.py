@@ -34,12 +34,12 @@ def code(key, title, hint, options):
 
 
 BUILDERS = [
-    design('theme', 'Válassz színeket a kutyakozmetikának!', 'Nézd meg, hogyan változnak a Pacsi oldalának színei! Mindhárom változat használható.', [option('violet', 'Szilvalila'), option('mint', 'Erdőzöld'), option('amber', 'Terrakotta')]),
+    design('theme', 'Válassz színeket a kutyakozmetikának!', 'Nézd meg, hogyan változnak a Tücsök oldalának színei! Mindhárom változat használható.', [option('violet', 'Szilvalila'), option('mint', 'Erdőzöld'), option('amber', 'Terrakotta')]),
     design('title', 'Adj főcímet a kutyakozmetikának!', 'A főcím mutassa meg a gazdiknak, milyen szolgáltatást találnak itt.', [option('discover', 'Kutyakozmetika, odafigyeléssel.'), option('build', 'Ápolt bunda, jó közérzet.'), option('future', 'Szőrápolás, nyugodt környezetben.')]),
     code('buttonTarget', 'Kösd be az időpontkérő gombot!', 'A fő gomb az időpontkérő űrlaphoz vezessen.', [option('signup', 'Az időpontkéréshez ugrik', 'KATTINTÁS → IDŐPONTKÉRÉS'), option('programs', 'A szolgáltatásokhoz ugrik', 'KATTINTÁS → SZOLGÁLTATÁSOK')]),
     code('formRule', 'Ellenőrizd az üres kutyanévmezőt!', 'Üres kutyanévvel ne jelenjen meg sikeres visszajelzés. Kitalált kutyanevet használj; ez a próba nem küld adatot.', [option('nonempty', 'Csak kitöltött mezővel sikeres', 'HA VAN SZÖVEG → SIKER'), option('always', 'Mindig sikeres', 'MINDEN ESETBEN → SIKER')]),
-    design('intro', 'Mutasd be röviden a Pacsit!', 'A főcím alatti mondat segít a gazdinak szolgáltatást választani.', [option('curious', 'Fürdetés és teljes kozmetika, előre egyeztetett időpontban.'), option('team', 'Kistestű és nagytestű kutyákat is várunk.'), option('practice', 'Válassz szolgáltatást, és kérj időpontot online.')]),
-    design('hero', 'Válassz nyitóképet!', 'Melyik kép mutatja be legjobban a kutyakozmetikát?', [option('code', 'Olló és fésű'), option('network', 'Fürdetés'), option('team', 'Kutya')]),
+    design('intro', 'Mutasd be röviden a Tücsköt!', 'A főcím alatti mondat segít a gazdinak szolgáltatást választani.', [option('curious', 'Fürdetés és teljes kozmetika, előre egyeztetett időpontban.'), option('team', 'Kistestű és nagytestű kutyákat is várunk.'), option('practice', 'Válassz szolgáltatást, és kérj időpontot online.')]),
+    design('hero', 'Válassz nyitóképet!', 'Melyik kép mutatja be legjobban a kutyakozmetikát?', [option('code', 'Szőrápolás'), option('network', 'Fürdetés'), option('team', 'Kutya')]),
     design('cardCode', 'Mutasd be a fürdetést!', 'Válassz rövid leírást a Fürdetés szolgáltatáshoz!', [option('create', 'Fürdetés, szárítás, átfésülés.'), option('solve', 'Tiszta, könnyen fésülhető bunda.'), option('play', 'Kímélő ápolás minden szőrtípushoz.')]),
     design('cardNetwork', 'Mutasd be a teljes kozmetikát!', 'A Teljes kozmetika kártyája mondja el, mit kap a kutya a kezelés során.', [option('connect', 'Fürdetés, nyírás, karomápolás.'), option('explore', 'Teljes ápolás az orrtól a farokig.'), option('signal', 'Fazonigazítás és alapos szőrápolás.')]),
     design('buttonLabel', 'Nevezd el az időpontkérő gombot!', 'A feliratból derüljön ki, hogy a gazdi időpontot kérhet.', [option('try', 'Időpontot kérek'), option('join', 'Időpontkérés'), option('discover', 'Kérek egy időpontot')]),
@@ -51,7 +51,7 @@ BUILDERS = [
     code('filterRule', 'Szűrd a szolgáltatásokat!', 'A szűrő csak a kiválasztott szolgáltatást mutassa.', [option('match', 'Csak a választott szolgáltatás', 'HA KATEGÓRIA EGYEZIK → MUTAT'), option('all', 'Mindkét szolgáltatás marad', 'MINDEN SZOLGÁLTATÁS → MUTAT')]),
     design('headingSize', 'Emeld ki a főcímet!', 'Próbáld ki, melyik címméret illik a közös oldalhoz!', [option('large', 'Nagy és hangsúlyos'), option('normal', 'Kompakt és nyugodt')]),
     design('borderStyle', 'Formázd a kártyák sarkát!', 'A kártyák formája is alakítja az oldal hangulatát.', [option('soft', 'Lekerekített sarkok'), option('square', 'Szögletes sarkok')]),
-    design('footerText', 'Írj üzenetet a lap aljára!', 'Válassz rövid zárómondatot a gazdiknak: meghívást, bejelentkezési tudnivalót vagy nyitvatartást.', [option('community', 'Szeretettel várunk a Pacsiban.'), option('future', 'Bejelentkezés előzetes egyeztetéssel.'), option('welcome', 'H–P 9–17 · Szombat 9–13')]),
+    design('footerText', 'Írj üzenetet a lap aljára!', 'Válassz rövid zárómondatot a gazdiknak: meghívást, bejelentkezési tudnivalót vagy nyitvatartást.', [option('community', 'Szeretettel várunk a Tücsökben.'), option('future', 'Bejelentkezés előzetes egyeztetéssel.'), option('welcome', 'Bejelentkezés alapján')]),
 ]
 BY_KEY = {item['key']: item for item in BUILDERS}
 FUNCTIONAL = dict(buttonTarget='signup', formRule='nonempty', navTarget='programs',
@@ -80,11 +80,11 @@ REVIEW_TITLES = {
 }
 REVIEW_HINTS = {
     'buttonTarget': 'Nyomd meg a fő gombot! Az időpontkéréshez visz?',
-    'formRule': 'Próbáld ki az űrlapot előbb üresen, majd egy kitalált kutyanévvel, például: Bodri!',
+    'formRule': 'Válassz szabad időpontot! Próbáld ki név nélkül, majd egy kitalált kutyanévvel.',
     'navTarget': 'A ☰ menüben válaszd a Szolgáltatásokat!',
-    'feedback': 'Töltsd ki kitalált kutyanévvel az időpontkérést, majd próbáld ki! Látszik a sikerüzenet?',
+    'feedback': 'Válassz szabad időpontot és írj kitalált kutyanevet! Látszik a sikerüzenet?',
     'menuRule': 'Nyomd meg kétszer a ☰ menügombot!',
-    'counterRule': 'Az időpontkérésnél egyszer nyomd meg a + gombot! Kettőre nő a kutyák száma?',
+    'counterRule': 'Válassz szabad időpontot, majd nyomd meg a + gombot! Kettő kutyát mutat?',
     'filterRule': 'Szolgáltatások → Fürdetés. Csak a Fürdetés kártyája marad?',
     'cardCode': 'A Szolgáltatásoknál nézd meg a Fürdetés kártyáját!',
     'cardNetwork': 'A Szolgáltatásoknál nézd meg a Teljes kozmetika kártyáját!',

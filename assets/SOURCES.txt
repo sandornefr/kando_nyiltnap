@@ -1,0 +1,20 @@
+Photographs used as stock illustrations in the educational Tücsök website prototype.
+They do not depict the Tücsök business, its staff or its customers.
+
+grooming.jpg — Tima Miroshnichenko / Pexels
+https://www.pexels.com/photo/person-grooming-hair-of-yorkshire-terrier-6131569/
+
+bath.jpg — Tima Miroshnichenko / Pexels
+https://www.pexels.com/photo/close-up-photo-of-bathing-of-dog-6131165/
+
+dog.jpg — Goochie Poochie Grooming / Pexels
+https://www.pexels.com/photo/studio-shot-of-dog-with-red-bandana-3361723/
+
+Downloaded 2026-10-15, 1200px-wide JPEGs from the Pexels image CDN.
+License: https://www.pexels.com/license/ — free website use, no endorsement implied.
+
+Public business information verified on 2026-10-15:
+https://www.facebook.com/tucsokkutyakozmetika/about
+https://www.facebook.com/tucsokkutyakozmetika/about_details
+Tücsök Kutyakozmetika; 1172 Budapest, Újlak u. 17–21.; +36 20 425 5441.
+Opening by prior appointment. Calendar times and dog names are fictional demo data.

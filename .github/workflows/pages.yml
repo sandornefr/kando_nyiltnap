@@ -33,6 +33,8 @@ jobs:
         run: |
           mkdir public
           cp index.html app.js site.js style.css config.js viewport.js public/
+          mkdir public/assets
+          cp assets/*.jpg public/assets/
           touch public/.nojekyll
           python - <<'PY'
           import os, json

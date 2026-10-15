@@ -1,6 +1,6 @@
 # KANDÓ KÓDLABOR
 
-Nyílt napi közös projekt: a résztvevők a kitalált Pacsi kutyakozmetika próbaoldalát terveznek, fejlesztenek és tesztelnek. Minden csoport saját hatjegyű kódot és külön projektet kap. Nincs egyéni pontverseny.
+Nyílt napi közös projekt: a résztvevők a Tücsök Kutyakozmetika nyilvános Facebook-oldala alapján tanulói weboldaltervet terveznek, fejlesztenek és tesztelnek. Nem hivatalos szalonoldal vagy tényleges megbízás. Minden csoport saját hatjegyű kódot és külön projektet kap. Nincs egyéni pontverseny.
 
 - Játékos: https://sandornefr.github.io/kando_nyiltnap/
 - Tanár: https://sandornefr.github.io/kando_nyiltnap/?view=host
@@ -29,13 +29,15 @@ A tervezési választások mind érvényesek. A működésbeli hibát a tesztel�
 
 ## Közös megbízás és záró kódnézet
 
-A Pacsi oldalán két kezelés (Fürdetés, Teljes kozmetika), nyitvatartás és időpontkérés szerepel. A próbaűrlap kitalált kutyanevet kér. Nem kezel valódi ügyféladatot, nem foglal időpontot. A szolgáltatói információs sorrend kialakításához az Óbunda és a StarDogs nyilvános oldalait néztük át; más szolgáltató árait, képeit vagy elérhetőségeit nem másoljuk.
+A Tücsök tanulói oldalán két kezelés (Fürdetés, Teljes kozmetika), nyilvános üzleti elérhetőségek és bemutató időpontfoglaló szerepel. A névjegyből ellenőrzött cím: 1172 Budapest, Újlak u. 17–21.; telefon: +36 20 425 5441; nyitvatartás: bejelentkezés alapján. Forrás: https://www.facebook.com/tucsokkutyakozmetika/about és https://www.facebook.com/tucsokkutyakozmetika/about_details (ellenőrizve: 2026-10-15).
+
+A foglaló lapozható napokat és választható idősávokat mutat. A foglalt helyek és kutyanevek kitalált minták; Facebook-kommentelő adatát nem használjuk. Az űrlap is kitalált kutyanevet kér. Nem kezel valódi ügyféladatot és nem küld valódi foglalást. Ezt a felület jelzi. A fotók Pexels-stockillusztrációk, nem a szalonban készültek. A képek helyben vannak, forrásuk és felhasználási feltételeik az assets/SOURCES.txt fájlban szerepelnek.
 
 Az átadásnál és lezárás után **A kód mögötte** (bemutatóban **Mi van a gombok mögött?**) megmutatja a csapat választásaiból ténylegesen használt HTML-gombot, CSS-színeket és JavaScript-működést. A tanár váltása a külön kivetítőn is megjelenik. A rövid tanulási út: 9. HTML, CSS, Bootstrap és alap JavaScript; 11.-től C# asztali alkalmazások, adatbázis és webprogramozás; 13. React frontend és backend. A Bootstrap a tanterv része, maga a játék nem használja.
 
 A belépő- és indítóoldalon lila–menta kódablak üdvözöl: „Helló, Kandó! A jövő veled kezdődik.”
 
-A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja meg a Tücsök Kutyakozmetika nyilvános Facebook-időpontposztját. A csoport ideje addig szünetel, és a „Vissza és folytatás” gomb indítja újra; a korábban kézzel szüneteltetett játék szünetben marad. A külső oldal kérhet bejelentkezést. A játék önmagában is érthető, a kitalált Pacsi tanulási feladat, nem a Tücsök valódi megbízása. Forrás: https://www.facebook.com/tucsokkutyakozmetika/posts/pfbid02YMSGtLsJ8vtuLedCZYrDQnaoDaMYdjWQQ5akXzkTjsWf7rksoaNCFs4iXtdU1umjl
+A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja meg a Tücsök Kutyakozmetika nyilvános Facebook-időpontposztját. A csoport ideje addig szünetel, és a „Vissza és folytatás” gomb indítja újra; a korábban kézzel szüneteltetett játék szünetben marad. A külső oldal kérhet bejelentkezést. A játék önmagában is érthető, a tanulói terv nem hivatalos szalonoldal. Forrás: https://www.facebook.com/tucsokkutyakozmetika/posts/pfbid02YMSGtLsJ8vtuLedCZYrDQnaoDaMYdjWQQ5akXzkTjsWf7rksoaNCFs4iXtdU1umjl
 
 ## Telefon, iPad és kivetítő
 
@@ -50,7 +52,7 @@ Frissítéskor az adott böngészőlapon megmarad a csatlakozás. A szüneteltet
 3. Volume: `/data`; `DATA_PATH=/data/games.sqlite3`. Egyetlen Railway-példány fusson.
 4. Nyilvános HTTPS-domain, `/health` válasz: `ok: true`, `version: kodlabor-2`.
 5. `config.js` → `apiBase`: a Railway nyilvános HTTPS-címe, vagy GitHub `API_BASE` repository variable.
-6. GitHub Pages → Source: GitHub Actions. Csak a hat nyilvános felületi fájl kerül ki; a Python-kód és az adatbázis nem.
+6. GitHub Pages → Source: GitHub Actions. Csak a nyilvános felületi fájlok és a három JPG-fotó kerülnek ki; a Python-kód és az adatbázis nem.
 
 Alapértelmezett `PUBLIC_URL`: `https://sandornefr.github.io/kando_nyiltnap/`. Más frontend esetén ezt és szükség szerint az `ALLOWED_ORIGINS` változót is állítsd be. A csoportok és becenevek 24 óráig érhetők el; lejárt rekordok takarítása új csoport létrehozásakor történik. Railway-újraindítás után a tanári bejelentkezést ismételni kell; a volume-on tárolt csoport megmarad. A korábbi minijátékok csoportjai nem alakíthatók át, új csoportot kell indítani.
 

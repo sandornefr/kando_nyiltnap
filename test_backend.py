@@ -141,9 +141,9 @@ class SharedProjectTests(unittest.TestCase):
                         options=[dict(option, label='Korábbi felirat') for option in task['options']])
         server.save(room)
         state = self.state()
-        self.assertIn('Pacsi kutyakozmetika', state['brief'])
+        self.assertIn('Tücsök Kutyakozmetika', state['brief'])
         self.assertIn('Fürdetés', state['brief'])
-        self.assertIn('H–P 9–17', state['brief'])
+        self.assertIn('bejelentkezés alapján', state['brief'])
         self.assertIn('kitalált kutyanevet', state['brief'])
         self.assertEqual(previous_project, state['project'])
         for task, current in zip(state['tasks'], CATALOGUE):
@@ -325,6 +325,16 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual(204, self.client.options('/api/task', headers={'Origin': 'https://sandornefr.github.io'}).status_code)
         for secret in ('server.py', 'project.py', 'requirements.txt', '.env', 'games.sqlite3'):
             self.assertEqual(404, self.client.get('/' + secret).status_code)
+        for name in ('grooming.jpg', 'bath.jpg', 'dog.jpg'):
+            with self.subTest(photo=name), self.client.get('/assets/' + name) as response:
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('image/jpeg', response.mimetype)
+                self.assertTrue(response.data.startswith(b'\xff\xd8\xff'))
+                self.assertTrue(response.data.endswith(b'\xff\xd9'))
+        for path in ('/assets/SOURCES.txt', '/assets/server.py', '/assets/missing.jpg',
+                     '/assets/%2e%2e%2fserver.py', '/assets/%2e%2e%5cserver.py'):
+            with self.subTest(blocked_asset=path):
+                self.assertEqual(404, self.client.get(path).status_code)
         self.assertEqual('kodlabor-2', self.client.get('/health').get_json()['version'])
 
     def test_idempotent_create_join_control(self):

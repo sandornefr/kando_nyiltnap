@@ -141,7 +141,7 @@ def public(room, player=None, host=False):
                 project=dict(config=dict(room['project']['config']), revision=room['project']['revision']),
                 tasks=task_data, events=list(room['events']),
                 progress=dict(done=sum(task['done'] for task in room['tasks']), total=len(room['tasks'])),
-                brief='A Pacsi kutyakozmetika weboldalt kér: mutassuk be a Fürdetés és a Teljes kozmetika szolgáltatást, a nyitvatartást (H–P 9–17, szombat 9–13), és készítsünk időpontkérő űrlapot. A próbához kitalált kutyanevet használunk; adatot nem küldünk.')
+                brief='A Tücsök Kutyakozmetika nyilvános Facebook-oldala alapján készítünk tanulói weboldaltervet. Mutassuk be a Fürdetés és a Teljes kozmetika szolgáltatást, az elérhetőségeket és a bejelentkezés alapján működő szalont. A bemutató időpontfoglalóhoz kitalált kutyanevet és időpontokat használunk; adatot nem küldünk, valódi foglalás nem történik.')
     if player:
         data['self'] = dict(id=player['id'], name=player['name'], avatar=player['avatar'], role=player['role'],
                             roleLabel=ROLE_LABELS[player['role']], taskIds=[task['id'] for task in room['tasks'] if task['ownerId'] == player['id']])
@@ -305,7 +305,7 @@ def create():
                 phase='brief', mode=mode, pause=None, deadline=0, presentation=None, joinUrl=PUBLIC_URL, created=time.time(),
                 project=dict(config=dict(DEFAULTS), revision=0), tasks=new_tasks(6), events=[], eventSequence=0,
                 joinRequests={}, controlRequests=[], createRequest=digest)
-    event(room, 'A Pacsi kutyakozmetika próbaoldala készen áll az ötleteitekre.')
+    event(room, 'A Tücsök Kutyakozmetika tanulói próbaoldala készen áll az ötleteitekre.')
     save(room)
     return jsonify(code=code, token=room['host'])
 
@@ -534,6 +534,13 @@ def asset(name):
     if name not in ('index.html', 'style.css', 'app.js', 'config.js', 'viewport.js', 'site.js'):
         return error('Nincs ilyen oldal.', 404)
     return send_from_directory(ROOT, name)
+
+
+@app.get('/assets/<name>')
+def photo_asset(name):
+    if name not in ('grooming.jpg', 'bath.jpg', 'dog.jpg'):
+        return error('Nincs ilyen kép.', 404)
+    return send_from_directory(ROOT / 'assets', name)
 
 
 if __name__ == '__main__':
