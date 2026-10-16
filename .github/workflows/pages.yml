@@ -27,13 +27,14 @@ jobs:
           python -m unittest -v test_backend.py
           node --check app.js
           node --check site.js
-          node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs test_viewport.cjs
+          node --check learning.js
+          node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs test_viewport.cjs test_learning.cjs
       - name: Assemble public files only
         env:
           API_BASE: ${{ vars.API_BASE }}
         run: |
           mkdir public
-          cp index.html app.js player-session.js site.js style.css config.js viewport.js public/
+          cp index.html app.js player-session.js site.js style.css config.js viewport.js learning.js learning.css public/
           mkdir public/assets
           cp assets/*.jpg public/assets/
           touch public/.nojekyll

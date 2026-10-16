@@ -579,14 +579,22 @@ def control():
         if room['status'] == 'lobby':
             assign_present(room)
         event(room, removed['name'] + ' kikerült a csoportból. A megmaradt munkáját a tanár folytathatja.')
-    elif action in ('code-html', 'code-css', 'code-javascript', 'code-path', 'code-close'):
+    elif (action in ('code-html', 'code-css', 'code-javascript', 'code-path', 'code-close')
+          or isinstance(action, str) and action.startswith('code-journey-')):
         if room['status'] not in ('working', 'finished') or (room['phase'] != 'handover' and room['status'] != 'finished'):
             return error('A kódot a közös bemutatónál vagy a lezárás után mutathatod meg.', 409)
         if action == 'code-close':
             room['presentation'] = None
+        elif action.startswith('code-journey-'):
+            page = action.removeprefix('code-journey-')
+            if page not in ('0', '1', '2', '3', '4'):
+                return error('A bemutató 0 és 4 közötti lapját válaszd!', 400)
+            presentation = room.get('presentation') or dict(tab='html', path=False)
+            room['presentation'] = dict(tab=presentation['tab'], path=True, page=int(page))
         elif action == 'code-path':
             presentation = room.get('presentation') or dict(tab='html', path=False)
-            room['presentation'] = dict(tab=presentation['tab'], path=not presentation['path'])
+            room['presentation'] = dict(tab=presentation['tab'], path=not presentation['path'],
+                                        page=presentation.get('page', 0))
         else:
             room['presentation'] = dict(tab=action.removeprefix('code-'), path=False)
     elif action in ('start', 'next') and room['status'] == 'lobby':
@@ -796,7 +804,7 @@ def index():
 
 @app.get('/<name>')
 def asset(name):
-    if name not in ('index.html', 'style.css', 'app.js', 'config.js', 'viewport.js', 'site.js', 'player-session.js'):
+    if name not in ('index.html', 'style.css', 'app.js', 'config.js', 'viewport.js', 'site.js', 'player-session.js', 'learning.js', 'learning.css'):
         return error('Nincs ilyen oldal.', 404)
     return send_from_directory(ROOT, name)
 

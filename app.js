@@ -13,6 +13,7 @@ let view=params.get('view')||'join',code=params.get('code')||'',token='',admin=s
 let state=null,busy=false,polling=false,structuralKey='',activeTask='',expandedTask=false;
 let pane='tasks',page=0,mobilePane='project',previewOpen=false,modalTask='',localProbe=null,previewInteracted=false,mountedRevision='',taskSignature='';
 let demoAllTasks=false,helpPage=0;
+let learningPage=0;
 let followBuild=true,lastLiveTest='',liveBroadcastBusy=false,projectedDraftSignature='',draftFocus=null,draftTimer,lastDraftBroadcast=0;
 let dismissSourceDialog=()=>{};
 let resumePending=false,skipSavedEntry=false,connectingSaved=false,resumeGeneration=0;
@@ -94,11 +95,19 @@ function hostStart(){
   dismissSourceDialog();
   $('#code-modal')?.remove();
   $('#help').hidden=false;
+  if($('#learning-link'))$('#learning-link').hidden=false;
   $('#context').textContent='Tanári irányítópult';
   if(!admin){app.innerHTML=`<section class="screen entry login-screen welcome-entry"><div class="entry-art">${welcomeCode()}</div><form class="entry-form form-stack" id="login-form"><span class="eyebrow">KANDÓ KÓDLABOR</span><h1>Tanári belépés</h1><label class="field">Jelszó<input id="password" type="password" autocomplete="current-password" required></label><button type="submit" class="button primary">Belépés →</button></form></section>`;return;}
   app.innerHTML=`<section class="screen host-intro"><div class="intro-top"><div class="intro-heading"><span class="eyebrow">ÜDV A KANDÓ KÓDLABORBAN</span><h1>Egy weboldal. Egy csapat</h1><p>Mai megbízás: egy kutyakozmetika oldala.</p></div>${welcomeCode()}</div><div class="workflow-overview"><div class="workflow-card"><b>01</b><h2>Te indítasz</h2><p>A megbízást a kivetítőn mutatod.</p></div><div class="workflow-card"><b>02</b><h2>A diákok alkotnak</h2><p>Telefonon kapnak saját feladatot.</p></div><div class="workflow-card"><b>03</b><h2>Az oldal változik</h2><p>Együtt látjátok és kipróbáljátok.</p></div></div><div class="mode-options">${button('<b>Kipróbálom egyedül →</b><span>Végigvezetés · nincs időkorlát</span>','create-demo','mode-option mode-option-primary primary')}${button('<b>Csoporttal indítok →</b><span>3, 6 vagy 9 fő · közös weboldal</span>','create-group','mode-option secondary')}</div><p class="intro-footnote">Első alkalom? Kezdd az egyedüli kipróbálással.</p></section>`;
 }
-function renderStart(){clearLiveDrafts();dismissSourceDialog();$('#code-modal')?.remove();structuralKey='';mountedRevision='';if(view==='host')hostStart();else if(view==='screen')app.innerHTML='<section class="screen waiting-panel"><h1>Nyisd meg a kivetítőt<br>a tanári felületről</h1></section>';else entry();}
+function showLearningPage(value=0){
+  learningPage=Math.max(0,Math.min(KandoLearning.count-1,Number(value)||0));
+  $('#context').textContent='A gombnyomástól a saját alkalmazásig';
+  $('#help').hidden=true;
+  if($('#learning-link')){const link=$('#learning-link');link.hidden=false;link.href='?view=host';link.textContent='Tanári felület';link.removeAttribute('target');}
+  app.innerHTML=`<section class="screen learning-standalone">${KandoLearning.render(learningPage,{})}</section>`;
+}
+function renderStart(){clearLiveDrafts();dismissSourceDialog();$('#code-modal')?.remove();structuralKey='';mountedRevision='';if(view==='host')hostStart();else if(view==='learning')showLearningPage();else if(view==='screen')app.innerHTML='<section class="screen waiting-panel"><h1>Nyisd meg a kivetítőt<br>a tanári felületről</h1></section>';else entry();}
 async function create(mode){
   if(state&&state.status!=='closed'&&!confirm('Új csoportot indítasz? A jelenlegi projektet lezárjuk.'))return;
   if(state&&state.status!=='closed')await api('control',{code,token,action:'close'});
@@ -336,6 +345,7 @@ function showTeacherTask(id){
 }
 function render(){
   $('#help').hidden=view!=='host';
+  if($('#learning-link'))$('#learning-link').hidden=view!=='host';
   if(!state)return renderStart();$('#context').textContent=view==='host'?'Tanári irányítópult':view==='screen'?'Közös projekt':'A fejlesztőcsapat tagja vagy.';
   if(previewOpen){patchPreview();return;}if(view==='player'){renderPlayer();return;}
   const key=[state.status==='lobby'?'lobby':'project',state.phase,state.status,state.paused].join(':');if(structuralKey!==key){structuralKey=key;modalTask='';state.status==='lobby'?lobby():hostShell();}else patchHost();
@@ -348,6 +358,7 @@ app.addEventListener('submit',e=>{
 app.addEventListener('change',e=>{if(e.target.dataset.draft){drafts[e.target.dataset.draft]=e.target.value;patchTaskDraft();broadcastDraft(e.target.dataset.draft);}});
 app.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled||busy)return;
+  if(view==='learning'&&b.dataset.learningPage!==undefined){showLearningPage(b.dataset.learningPage);app.querySelector('[aria-current="step"]')?.focus();return;}
   if(b.dataset.person){managePerson(b.dataset.person);return;}
   if(b.dataset.removePerson){act(async()=>{const r=await api('control',{code,token,action:'remove-player',playerId:b.dataset.removePerson});$('#person-modal')?.remove();receive(r);notify('A hely felszabadult. Az elkészült munka megmaradt.');});return;}
   if(b.dataset.choice){drafts[b.dataset.choice]=b.dataset.value;app.querySelectorAll('[data-choice]').forEach(x=>{const chosen=x.dataset.choice===b.dataset.choice&&x.dataset.value===b.dataset.value;x.classList.toggle('selected',chosen);x.setAttribute('aria-pressed',String(chosen));});patchTaskDraft();broadcastDraft(b.dataset.choice);return;}
@@ -410,14 +421,26 @@ function syncCodeReveal(){
   if(!shown){shade?.remove();return;}
   const key=JSON.stringify([shown,state.project.revision,view]);
   if(shade?.dataset.key===key)return;
-  const priorFocus=shade?.contains(document.activeElement)?document.activeElement.dataset.code:null;
+  const focused=shade?.contains(document.activeElement)?document.activeElement:null;
+  const priorFocus=focused?.dataset.code,priorPage=focused?.dataset.learningPage;
   if(!shade){
     shade=document.createElement('div');shade.id='code-modal';shade.className='modal-shade';shade.setAttribute('role','dialog');shade.setAttribute('aria-modal','true');shade.setAttribute('aria-label','A választásaitok mögötti kód');document.body.append(shade);
-    shade.addEventListener('click',e=>{const action=e.target.closest('button')?.dataset.code;if(action&&view==='host')act(()=>control('code-'+action));});
+    shade.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||view!=='host')return;const action=b.dataset.code;if(action)act(()=>control('code-'+action));else if(b.dataset.learningPage!==undefined)act(()=>control('code-journey-'+b.dataset.learningPage));});
   }
-  const sample=KandoSite.source(state.project.config,shown.tab),host=view==='host';shade.dataset.key=key;
-  shade.innerHTML=`<div class="modal-panel code-modal" data-reveal="${shown.path?'path':'code'}"><div class="modal-head"><span>A választásaitok mögötti kód</span>${host?'<button class="button quiet" data-code="close">Bezárás ×</button>':''}</div><div class="code-tabs" role="tablist" aria-label="Kódrészletek">${['html','css','javascript'].map(t=>`<button class="button ${t===shown.tab?'active':''}" role="tab" aria-selected="${t===shown.tab}" data-code="${t}" ${host?'':'disabled'}>${t==='javascript'?'JavaScript':t.toUpperCase()}</button>`).join('')}</div><div class="code-reveal-body"><div class="code-explanation"><h2>${esc(sample.label)}</h2><p>${esc(sample.explanation)}</p></div><pre class="code-sample"><code>${esc(sample.code)}</code></pre></div><div class="learning-path"><div><b>9. évfolyam</b><span>HTML · CSS · Bootstrap<br>Alap JavaScript</span></div><div><b>11. évfolyamtól</b><span>C# · asztali alkalmazások<br>Adatbázis · webprogramozás</span></div><div><b>13. évfolyam</b><span>React frontend<br>Backendfejlesztés</span></div></div><div class="code-reveal-footer"><p>Ennek az alapjait már 9.-ben megtanulod.</p>${host?`<button class="button secondary" data-code="path">${shown.path?'Vissza a kódhoz':'Merre tovább?'}</button>`:''}</div></div>`;
-  if(host)shade.querySelector(`[data-code="${priorFocus||shown.tab}"]`)?.focus();
+  const host=view==='host';shade.dataset.key=key;
+  if(shown.path){
+    shade.setAttribute('aria-label','A gombnyomástól a saját alkalmazásig');
+    shade.innerHTML=`<div class="modal-panel journey-modal"><div class="journey-head"><span>Így jutsz el a saját játékodig</span>${host?`<div><button class="button quiet" data-code="${esc(shown.tab)}">Vissza a kódhoz</button><button class="button quiet" data-code="close" aria-label="Bemutató bezárása">Bezárás ×</button></div>`:''}</div>${KandoLearning.render(shown.page||0,state.project.config,host)}</div>`;
+  }else{
+    const sample=KandoSite.source(state.project.config,shown.tab);
+    if(Array.isArray(state.project.builtKeys)&&!state.project.builtKeys.includes('buttonLabel'))sample.explanation='Egy gomb kódja az oldal jelenlegi beállításaival. Ezt a részt a csapat még nem tette közzé.';
+    shade.setAttribute('aria-label','A választásaitok mögötti kód');
+    shade.innerHTML=`<div class="modal-panel code-modal" data-reveal="code"><div class="modal-head"><span>A választásaitok mögötti kód</span>${host?'<button class="button quiet" data-code="close">Bezárás ×</button>':''}</div><div class="code-tabs" role="tablist" aria-label="Kódrészletek">${['html','css','javascript'].map(t=>`<button class="button ${t===shown.tab?'active':''}" role="tab" aria-selected="${t===shown.tab}" data-code="${t}" ${host?'':'disabled'}>${t==='javascript'?'JavaScript':t.toUpperCase()}</button>`).join('')}</div><div class="code-reveal-body"><div class="code-explanation"><h2>${esc(sample.label)}</h2><p>${esc(sample.explanation)}</p></div><pre class="code-sample"><code>${esc(sample.code)}</code></pre></div><div class="code-reveal-footer"><p>Ma választottál. Hamarosan te írod meg.</p>${host?'<button class="button primary" data-code="journey-0">Tanulási út · 9–13. →</button>':''}</div></div>`;
+  }
+  if(host){
+    const focusSelector=shown.path?'[aria-current="step"]':`[data-code="${shown.tab}"]`;
+    (shade.querySelector(priorFocus?`[data-code="${priorFocus}"]`:priorPage!==undefined?`[data-learning-page="${priorPage}"]`:focusSelector)||shade.querySelector(focusSelector))?.focus();
+  }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#code-modal')&&view==='host')act(()=>control('code-close'));});
 recoverSession();if(code&&(token||view==='screen')){app.innerHTML='<section class="screen waiting-panel"><h1>Kapcsolódás…</h1></section>';connectSaved();}else renderStart();

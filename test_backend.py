@@ -316,7 +316,7 @@ class SharedProjectTests(unittest.TestCase):
         self.assertEqual(state['presentation'], self.state()['presentation'])
         self.assertEqual(state['presentation'], server.load(self.code)['presentation'])
         state = self.control('code-path', requestId='code-path-once-123')
-        self.assertEqual(dict(tab='css', path=True), state['presentation'])
+        self.assertEqual(dict(tab='css', path=True, page=0), state['presentation'])
         self.assertEqual(state['presentation'], self.control('code-path', requestId='code-path-once-123')['presentation'])
         self.assertEqual(dict(tab='html', path=False), self.control('code-html')['presentation'])
         presentation = self.control('code-javascript')['presentation']
@@ -324,12 +324,87 @@ class SharedProjectTests(unittest.TestCase):
             state = self.state()
             self.assertEqual('finished', state['status'])
             self.assertEqual(presentation, state['presentation'])
-            self.assertEqual(dict(tab='javascript', path=True), self.control('code-path')['presentation'])
+            self.assertEqual(dict(tab='javascript', path=True, page=0), self.control('code-path')['presentation'])
             self.assertIsNone(self.control('code-close')['presentation'])
             self.assertIsNone(self.state()['presentation'])
-            self.assertEqual(dict(tab='html', path=True), self.control('code-path')['presentation'])
+            self.assertEqual(dict(tab='html', path=True, page=0), self.control('code-path')['presentation'])
         self.control('close')
         self.control('code-html', expected=409)
+
+    def test_learning_pages_are_explicit_shared_and_do_not_change_the_project(self):
+        self.create()
+        self.start_build()
+        self.submit('design-theme', 'mint')
+        self.control('next')
+        self.control('next')
+        before = self.state()
+        self.control('code-css')
+        for page in (0, 1, 2, 3, 4, 2, 0):
+            with self.subTest(page=page):
+                expected = dict(tab='css', path=True, page=page)
+                updated = self.control(f'code-journey-{page}')
+                self.assertEqual(expected, updated['presentation'])
+                self.assertEqual(expected, self.state()['presentation'])
+                self.assertEqual(expected, self.state(self.tokens[0])['presentation'])
+                self.assertEqual(expected, server.load(self.code)['presentation'])
+                self.assertEqual(expected, self.control(f'code-journey-{page}')['presentation'])
+                for key in ('project', 'progress', 'tasks', 'events', 'phase', 'status'):
+                    self.assertEqual(before[key], updated[key], key)
+        self.assertEqual(dict(tab='html', path=False), self.control('code-html')['presentation'])
+        self.assertEqual(dict(tab='html', path=True, page=3), self.control('code-journey-3')['presentation'])
+        self.assertEqual(dict(tab='html', path=False, page=3), self.control('code-path')['presentation'])
+        self.assertEqual(dict(tab='html', path=True, page=3), self.control('code-path')['presentation'])
+        self.assertIsNone(self.control('code-close')['presentation'])
+        self.assertEqual(dict(tab='html', path=True, page=4), self.control('code-journey-4')['presentation'])
+
+    def test_learning_pages_reject_unauthorized_early_and_invalid_navigation(self):
+        self.create()
+        for action in ('code-journey-0', 'code-journey-4'):
+            self.control(action, expected=409)
+            self.post('control', dict(code=self.code, token=self.tokens[0], action=action), 403)
+            self.post('control', dict(code=self.code, token='spectator', action=action), 403)
+        self.start_build()
+        self.control('code-journey-1', expected=409)
+        self.control('next')
+        self.control('code-journey-1', expected=409)
+        self.control('next')
+        before = self.control('code-journey-2')
+        for suffix in ('-1', '5', '99', '', '1.5', '00', 'x', 'None'):
+            with self.subTest(suffix=suffix):
+                self.control('code-journey-' + suffix, expected=400)
+                self.assertEqual(before['presentation'], self.state()['presentation'])
+        self.post('control', dict(code=self.code, token=self.tokens[0], action='code-journey-4'), 403)
+        self.assertEqual(before['presentation'], self.state()['presentation'])
+        self.control('close')
+        self.control('code-journey-0', expected=409)
+
+    def test_finished_learning_presentation_is_idempotent_and_survives_restart(self):
+        self.create()
+        self.start_build()
+        self.control('finish')
+        self.control('code-javascript')
+        expected = dict(tab='javascript', path=True, page=4)
+        state = self.control('code-journey-4', requestId='journey-once-1234')
+        self.assertEqual(expected, state['presentation'])
+        self.assertEqual(expected, self.control('code-journey-4', requestId='journey-once-1234')['presentation'])
+        self.assertEqual(state['events'], self.state()['events'])
+        env = dict(os.environ, DATA_PATH=server.DB_PATH)
+        script = ('import json,server; r=server.app.test_client().get("/api/state",query_string='
+                  + repr(dict(code=self.code)) + '); assert r.status_code == 200; '
+                  'print(json.dumps(r.get_json()["presentation"]))')
+        run = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True, env=env, check=True)
+        self.assertEqual(expected, json.loads(run.stdout))
+        self.assertEqual(dict(tab='javascript', path=True, page=1), self.control('code-journey-1')['presentation'])
+        self.assertEqual('finished', self.state()['status'])
+
+    def test_learning_assets_are_served_by_the_static_allowlist(self):
+        for name in ('learning.js', 'learning.css'):
+            with self.subTest(asset=name), patch('server.send_from_directory', return_value='learning asset') as serving:
+                response = self.client.get('/' + name)
+                self.assertEqual(200, response.status_code)
+                serving.assert_called_once_with(server.ROOT, name)
+        for name in ('learning.py', 'test_learning.cjs'):
+            self.assertEqual(404, self.client.get('/' + name).status_code)
 
     def test_teacher_and_player_capabilities_are_private(self):
         self.create()

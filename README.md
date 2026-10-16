@@ -49,7 +49,13 @@ A Tücsök tanulói oldalán két kezelés (Fürdetés, Teljes kozmetika), nyilv
 
 A foglaló lapozható napokat és választható idősávokat mutat. A foglalt helyek és kutyanevek kitalált minták; Facebook-kommentelő adatát nem használjuk. Az űrlap is kitalált kutyanevet kér. Nem kezel valódi ügyféladatot és nem küld valódi foglalást. Ezt a felület jelzi. A fotók Pexels-stockillusztrációk, nem a szalonban készültek. A képek helyben vannak, forrásuk és felhasználási feltételeik az assets/SOURCES.txt fájlban szerepelnek.
 
-Az átadásnál és lezárás után **A kód mögötte** (bemutatóban **Mi van a gombok mögött?**) megmutatja a csapat választásaiból ténylegesen használt HTML-gombot, CSS-színeket és JavaScript-működést. A tanár váltása a külön kivetítőn is megjelenik. A rövid tanulási út: 9. HTML, CSS, Bootstrap és alap JavaScript; 11.-től C# asztali alkalmazások, adatbázis és webprogramozás; 13. React frontend és backend. A Bootstrap a tanterv része, maga a játék nem használja.
+Az átadásnál és lezárás után **A kód mögötte** (bemutatóban **Mi van a gombok mögött?**) megmutatja a csapat választásaiból ténylegesen használt HTML-gombot, CSS-színeket és JavaScript-működést. Innen a **Tanulási út · 9–13.** öt lapos bemutatóhoz vezet; a tanár lapváltását a külön kivetítő is követi, újratöltés után is. Nincs automatikus lapozás.
+
+A bemutató játék és bejelentkezés nélkül is megnyitható a **?view=learning** címen, illetve a tanári fejléc **Tanulási út** hivatkozásával. Ez az önálló változat mintabeállításokat használ, és nem módosítja a csoportokat vagy a mentett belépéseket.
+
+A tanulási ív: **Most** választás → kód → eredmény; **9.** Programozási alapok (HTML, CSS, Bootstrap, alap JavaScript) és IKT projektmunka I.; **10.** Programozási alapok (Python), IKT projektmunka I., majd **év végén ágazati alapvizsga**; **11–12.** C# asztali alkalmazások, Adatbázis-kezelés I., Webprogramozás, Szoftvertesztelés, IKT projektmunka II., Szakmai angol; **13.** Asztali és mobil alkalmazások fejlesztése és tesztelése, Adatbázis-kezelés II., Frontend programozás és tesztelés (React), Backend programozás és tesztelés, Munkavállalói idegen nyelv. A gomb megírásától a feltételeken és az adatmentésen át egy Kódlaborhoz hasonló közös rendszer megépítése a bemutatott cél. A későbbi nyelvi példák tanulási példák: a jelenlegi játék JavaScript/Python alkalmazás, a foglalója nem ment valódi foglalást.
+
+A tantárgyak forrása az IKK által hivatkozott [Szoftverfejlesztő és -tesztelő PTT (2020.06.29. v1, 2–6. oldal)](https://api.ikk.hu/v1/media/documents/7109?filename=Szoftverfejleszt%C5%91-%C3%A9s-tesztel%C5%91-2020.06.29.-v1.pdf). Az évfolyamcsoportosítást és a helyi web/Python/C#/React sorrendet a tanár egyeztette; a PTT évfolyamonkénti bontása ajánlás. A Bootstrap a tananyag része, maga a játék nem használja.
 
 A belépő- és indítóoldalon lila–menta kódablak üdvözöl: „Helló, Kandó! A jövő veled kezdődik.”
 
@@ -84,4 +90,4 @@ Python 3.12, `pip install -r requirements.txt`, majd `python server.py`. Alapér
 
 Az API integrációs ellenőrzései: `python -m unittest -v test_backend.py`. Ezek a GitHub Pages közzététele előtt automatikusan is lefutnak, külön ideiglenes adatbázisban. A tesztek nem használják az éles tanári jelszót vagy csoportadatokat.
 
-A böngészős munkamenet, az épülő mintaoldal és a képernyőméret-kezelés ellenőrzései: `node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs test_viewport.cjs`. A közzététel ezeket is futtatja.
+A böngészős munkamenet, az épülő mintaoldal, a tanulási út és a képernyőméret-kezelés ellenőrzései: `node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs test_viewport.cjs test_learning.cjs`. A közzététel ezeket is futtatja.

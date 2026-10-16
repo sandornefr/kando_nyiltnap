@@ -83,6 +83,7 @@ function boot({session = storage(), local = storage(), search = '', handler} = {
   sandbox.window = sandbox;
   const context = vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(require.resolve('./player-session.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(require.resolve('./learning.js'), 'utf8'), context);
   vm.runInContext(SOURCE, context);
   return {
     session, local, requests,
@@ -117,6 +118,25 @@ function boot({session = storage(), local = storage(), search = '', handler} = {
 async function settle() {
   for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve));
 }
+
+test('the standalone learning route leaves saved games alone and needs no server or login', async () => {
+  const session = storage({'kando-nyiltnap-host': JSON.stringify({code:'654321',token:'private-host-token'})});
+  const local = savedLocal();
+  const app = boot({session,local,search:'?view=learning'});
+  await settle();
+  assert.match(app.html(), /Ma választasz, később megírod/);
+  app.clickData('learning-page','2');
+  assert.match(app.html(), /Python/);
+  assert.match(app.html(), /Ágazati alapvizsga/);
+  app.clickData('learning-page','4');
+  assert.match(app.html(), /React/);
+  assert.match(app.html(), /Kódlaborhoz hasonló játék/);
+  app.tick();
+  await settle();
+  assert.deepEqual(app.requests, []);
+  assert.equal(JSON.parse(session.getItem('kando-nyiltnap-host')).token,'private-host-token');
+  assert.equal(create(storage(),local,{now:()=>NOW}).get(PLAYER.code).token, PLAYER.token);
+});
 
 test('opening a new tab resumes the saved player and polls using the same token', async () => {
   const app = boot({local: savedLocal()});

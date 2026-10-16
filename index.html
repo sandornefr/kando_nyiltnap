@@ -7,12 +7,13 @@
   <meta name="description" content="KANDÓ KÓDLABOR – közösen tervezünk, fejlesztünk és tesztelünk egy weboldalt.">
   <title>KANDÓ KÓDLABOR</title>
   <link rel="stylesheet" href="style.css?v=ipad10">
+  <link rel="stylesheet" href="learning.css?v=journey11">
 </head>
 <body>
   <header class="app-header">
     <a class="brand" href="./" aria-label="Kandó Kódlabor kezdőlap"><span class="brand-mark" aria-hidden="true">&lt;/&gt;</span><span>KANDÓ <strong>KÓDLABOR</strong></span></a>
     <span id="context" class="header-context">Ma ti vagytok a fejlesztőcsapat.</span>
-    <div class="header-actions"><button id="help" class="button quiet" hidden>Útmutató</button><button id="full" class="button quiet icon-button" aria-label="Teljes képernyő">⛶</button></div>
+    <div class="header-actions"><a id="learning-link" class="button quiet" href="?view=learning" target="_blank" rel="noopener" hidden>Tanulási út</a><button id="help" class="button quiet" hidden>Útmutató</button><button id="full" class="button quiet icon-button" aria-label="Teljes képernyő">⛶</button></div>
   </header>
   <div id="connection" hidden role="status">Kapcsolódás…</div>
   <main id="app" aria-label="Kódlabor munkaterület"></main>
@@ -20,7 +21,8 @@
   <script src="config.js"></script>
   <script src="site.js?v=teams9"></script>
   <script src="player-session.js?v=teams9"></script>
-  <script src="app.js?v=teams9"></script>
+  <script src="learning.js?v=journey11"></script>
+  <script src="app.js?v=journey11"></script>
   <script src="viewport.js?v=ipad10"></script>
 </body>
 </html>
