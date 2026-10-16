@@ -153,9 +153,27 @@ const isDemo=()=>view==='host'&&state?.mode==='demo';
 function nextDemoTask(){return state.tasks.find(t=>t.status==='issue')||state.tasks.find(t=>t.kind!=='test'&&t.status==='ready')||state.tasks.find(t=>t.status==='ready');}
 function demoGuide(){
   const t=nextDemoTask(),end=['finished','closed'].includes(state.status)||state.phase==='handover',brief=state.phase==='brief';
-  const title=end?'Ezt készítetted el':brief?'Próbáld ki a három szerepet!':t?.title||'Minden feladat elkészült!';
-  const note=end?'Színt választottál, működést állítottál be, majd tesztelted az oldalt.':brief?'Most mindent te próbálsz ki. A csoportban ezeket a feladatokat a diákok kapják.':!t?'A két próba is sikerült. Jöhet a közös oldal bemutatása!':t.status==='issue'?'A tesztelő visszajelzett. Javítsd a működést, majd próbáld ki újra!':t.kind==='test'?'Most látogatóként próbálod ki az oldalt. Ha hibát találsz, visszaadod javításra.':t.kind==='code'?'Most megadod, mit csináljon az oldal egy kattintásra.':t.key==='theme'?'Válassz például erdőzöldet! Mentés után nézd meg, hogyan változott a közös oldal.':'Válassz címet! Mentés után már a közös oldalon látod.';
-  return `<div class="demo-guide"><span class="eyebrow">${brief?'VEZETETT BEMUTATÓ':end||!t?'BEMUTATÓ KÉSZ':`MOST TE VAGY A ${esc(t.roleLabel.toLocaleUpperCase('hu'))}`}</span><div class="demo-roles">${Object.entries(roleLabels).map(([k,v])=>`<span class="${t?.role===k&&!brief&&!end?'active':''}">${v}</span>`).join('')}</div><h2>${esc(title)}</h2><p>${esc(note)}</p><div class="demo-progress" aria-label="${state.progress.done} / ${state.progress.total} feladat kész">${state.tasks.map(x=>`<span class="${x.status==='done'?'done':''}"></span>`).join('')}</div>${end&&state.status!=='closed'?button('Mi van a gombok mögött?','code-reveal','primary'):''}${button(end?'Vissza az indításhoz →':brief?'Kezdem a színválasztást →':t?'Kipróbálom ezt a feladatot →':'Megnézem az eredményt →',end?'new-group':'demo-next',end?'quiet':'primary')}${!brief&&!end?button(demoAllTasks?'Vissza a vezetéshez':'Összes feladat','show-demo-tasks','quiet'):''}</div>`;
+  const title=end?'Elkészült a közös oldal':brief?'Tücsök Kutyakozmetika · megbízás':t?.title||'Minden feladat elkészült';
+  const role=brief?'TANÁRI BEMUTATÓ':end||!t?'BEMUTATÓ KÉSZ':`${t.status==='issue'?'JAVÍTÁS · ':''}${t.roleLabel||roleLabels[t.role]||'KÖVETKEZŐ LÉPÉS'}`;
+  return `<div class="demo-guide"><div class="demo-step-summary"><span class="demo-step-role">${esc(role)}</span><strong>${esc(title)}</strong></div><span class="demo-completion">${state.progress.done} / ${state.progress.total} kész</span><div class="demo-toolbar-actions">${button('Összes feladat','show-demo-tasks','secondary')}${end&&state.status!=='closed'?button('A kód mögötte','code-reveal','primary'):''}${button(end?'Új bemutató':brief?'Indulhatunk →':t?'Következő feladat →':'Az eredmény →',end?'new-group':'demo-next',end?'quiet':'primary')}</div></div>`;
+}
+function closeDemoTasks(restoreFocus=true){
+  demoAllTasks=false;$('#demo-task-list')?.remove();
+  if(restoreFocus)app.querySelector('[data-action="show-demo-tasks"]')?.focus();
+}
+function showDemoTasks(){
+  if(!isDemo())return;
+  if($('#demo-task-list')){closeDemoTasks();return;}
+  demoAllTasks=true;pane='tasks';page=0;
+  const shade=document.createElement('div');shade.className='modal-shade demo-task-shade';shade.id='demo-task-list';shade.setAttribute('role','dialog');shade.setAttribute('aria-modal','true');shade.setAttribute('aria-label','A bemutató összes feladata');
+  const finished=['finished','closed'].includes(state.status)||state.phase==='handover';
+  shade.innerHTML=`<div class="modal-panel demo-task-modal"><div class="modal-head"><strong>Összes feladat</strong>${button('Vissza az oldalhoz ×','close-demo-tasks','quiet')}</div><div class="demo-list-body">${teamPanel()}</div><div class="demo-list-footer"><span>${finished?'Itt visszanézheted az elkészült feladatokat.':'A kész feladatot is újra kipróbálhatod.'}</span>${button('Új bemutató','new-group','secondary')}</div></div>`;
+  app.append(shade);patchHost();scheduleListFit();shade.querySelector('button')?.focus();
+}
+function demoShell(){
+  demoAllTasks=false;mobilePane='project';
+  app.innerHTML=`<section class="screen host-screen guided-demo"><div class="project-pane demo-stage">${buildBrowser()}<div id="shared-site" class="site-mount"></div><div id="event-line" class="event-line contribution-notice" aria-live="polite"></div></div><div id="demo-content" class="demo-controls">${demoGuide()}</div></section>`;
+  $('.build-browser').hidden=state.phase==='brief';lastLiveTest='';mountedRevision='';patchHost();scheduleListFit();
 }
 function teacherCue(){
   if(isDemo())return '<b>Vezetett bemutató</b><span>Választasz → az oldal változik → kipróbálod.</span>';
@@ -177,6 +195,7 @@ function lobby(){
   scheduleListFit();
 }
 function hostShell(){
+  if(isDemo()){demoShell();return;}
   const host=view==='host',demo=isDemo();
   app.innerHTML=`<section class="screen host-screen ${demo?'guided-demo':host?'':'projection'}"><div class="session-top"><div><span class="eyebrow">${demo?'KIPRÓBÁLÁS EGYEDÜL':'TÜCSÖK KUTYAKOZMETIKA · TANULÓI TERV'}</span><h1 id="phase-title">${state.status==='finished'?'Ezt együtt készítettük':phaseLabels[state.phase]||'Közös projekt'}</h1></div><div class="session-controls">${demo?'':`<span class="session-code">${esc(code)}</span>`}<span id="clock" class="timer"></span>${host&&!demo?button('Kivetítő ↗','projector','quiet'):''}</div></div>${phaseStrip()}<div class="host-view-switch">${button('Közös oldal','view-project','secondary')}${button(demo?'Következő lépés':'A csapat','view-team','secondary')}</div><div class="host-layout" data-view="${mobilePane}"><div class="project-pane"><div class="pane-heading"><strong>${state.phase==='brief'?'Ezt a megbízást kapja a csapat':'Ezt az oldalt alakítja a csapat'}</strong><span id="contribution-count"></span></div><div id="shared-site" class="site-mount"></div><div id="event-line" class="event-line contribution-notice" aria-live="polite"></div></div>${host?demo?`<aside class="team-pane demo-pane"><div id="demo-content">${demoGuide()}</div></aside>`:`<aside class="team-pane">${groupCue()}${teamPanel()}</aside>`:`<aside class="team-pane projection-note"><span class="eyebrow">KÖZÖS MEGTEKINTÉS</span><h2>${esc((prompts[state.phase]||'Ezt együtt készítettük').replace(/\.$/,''))}</h2><div id="screen-progress"></div></aside>`}</div><div class="host-footer"><div class="teacher-cue">${host?teacherCue():esc(prompts[state.phase])}</div>${host?`<div class="session-controls" id="host-controls">${hostControls()}</div>`:''}</div></section>`;
   $('#shared-site').insertAdjacentHTML('beforebegin',buildBrowser());
@@ -363,7 +382,7 @@ app.addEventListener('click',e=>{
   if(b.dataset.removePerson){act(async()=>{const r=await api('control',{code,token,action:'remove-player',playerId:b.dataset.removePerson});$('#person-modal')?.remove();receive(r);notify('A hely felszabadult. Az elkészült munka megmaradt.');});return;}
   if(b.dataset.choice){drafts[b.dataset.choice]=b.dataset.value;app.querySelectorAll('[data-choice]').forEach(x=>{const chosen=x.dataset.choice===b.dataset.choice&&x.dataset.value===b.dataset.value;x.classList.toggle('selected',chosen);x.setAttribute('aria-pressed',String(chosen));});patchTaskDraft();broadcastDraft(b.dataset.choice);return;}
   if(b.dataset.buildPage){followBuild=false;patchHost();$('#shared-site')?._siteController?.go(b.dataset.buildPage);syncBuildBrowser();return;}
-  if(b.dataset.task){showTeacherTask(b.dataset.task);return;}
+  if(b.dataset.task){if(isDemo())closeDemoTasks(false);showTeacherTask(b.dataset.task);return;}
   if(b.dataset.ownTask){activeTask=b.dataset.ownTask;expandedTask=true;taskSignature='';renderPlayer(true);return;}
   if(b.dataset.openTest){openPreview(b.dataset.openTest);return;}
   if(b.dataset.save){clearTimeout(draftTimer);act(async()=>{const t=taskById(b.dataset.save),value=drafts[t.id]??t.value??t.options[0].value;const r=await api('task',{code,token,taskId:t.id,value});delete drafts[t.id];expandedTask=false;modalTask='';$('#task-modal')?.remove();receive(r);notify('Kint van! Ezt a részt te adtad hozzá.');if(view==='host'){followBuild=true;mountSite($('#shared-site'),false,sharedSiteAction,{view:siteViewFor(t.key),focusKey:t.key});syncBuildBrowser();}});return;}
@@ -378,12 +397,13 @@ app.addEventListener('click',e=>{
   if(action==='commission-source'){act(showCommissionSource);return;}
   if(action==='code-reveal'){act(()=>control('code-html'));return;}
   if(action==='demo-next'){act(demoNext);return;}
-  if(action==='show-demo-tasks'){demoAllTasks=!demoAllTasks;$('#demo-content').innerHTML=demoAllTasks?button('← Vissza a vezetéshez','show-demo-tasks','secondary')+teamPanel():demoGuide();return;}
+  if(action==='show-demo-tasks'){showDemoTasks();return;}
+  if(action==='close-demo-tasks'){closeDemoTasks();return;}
   if(action==='create-group'||action==='create-demo'){act(()=>create(action==='create-demo'?'demo':'group'));return;}
   if(['start','next','pause','finish'].includes(action)){act(()=>control(action));return;}
   if(action==='new-group'){if(state&&state.status!=='finished'&&!confirm('Lezárod a jelenlegi csoportot?'))return;act(async()=>{if(state?.status!=='closed')await api('control',{code,token,action:'close'});state=null;code='';token='';store.remove(KEYS.host);hostStart();});return;}
   if(action==='projector'){window.open(pageURL('?view=screen&code='+code),'kando-projector');return;}
-  if(action==='pane-tasks'||action==='pane-people'){pane=action==='pane-tasks'?'tasks':'people';page=0;if(isDemo())$('#demo-content').innerHTML=button('← Vissza a vezetéshez','show-demo-tasks','secondary')+teamPanel();else $('.team-pane').innerHTML=groupCue()+teamPanel();return;}
+  if(action==='pane-tasks'||action==='pane-people'){pane=action==='pane-tasks'?'tasks':'people';page=0;if(isDemo()){const list=$('#demo-task-list .demo-list-body');if(list){list.innerHTML=teamPanel();patchHost();scheduleListFit();}}else $('.team-pane').innerHTML=groupCue()+teamPanel();return;}
   if(action==='page-prev'||action==='page-next'){const kind=state.status==='lobby'||pane==='people'?'people':'tasks',total=kind==='people'?state.players.length:state.tasks.length,count=pageSize(kind);page=Math.max(0,Math.min(Math.max(0,Math.ceil(total/count)-1),page+(action==='page-next'?1:-1)));patchHost();return;}
   if(action==='view-project'||action==='view-team'){mobilePane=action==='view-team'?'team':'project';$('.host-layout').dataset.view=mobilePane;return;}
   if(action==='preview'){openPreview();return;}if(action==='back'){closePreview();return;}
@@ -446,7 +466,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#code-modal')&&v
 recoverSession();if(code&&(token||view==='screen')){app.innerHTML='<section class="screen waiting-panel"><h1>Kapcsolódás…</h1></section>';connectSaved();}else renderStart();
 setInterval(()=>{if(!document.hidden)connectSaved();},1600);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectSaved();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#person-modal')?.remove();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const person=$('#person-modal');if(person){person.remove();return;}if(isDemo()&&$('#demo-task-list'))closeDemoTasks();}});
 addEventListener('resize',()=>{pageMeasurements.clear();scheduleListFit();});
 if(typeof ResizeObserver==='function')new ResizeObserver(scheduleListFit).observe(app);
 document.fonts?.ready.then(()=>{pageMeasurements.clear();scheduleListFit();});

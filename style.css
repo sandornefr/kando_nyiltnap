@@ -1414,3 +1414,96 @@ html.keyboard-open .welcome-entry .entry-form .primary { min-height: 44px; paddi
   html.keyboard-open .welcome-entry .entry-form .primary,
   html.keyboard-open .welcome-entry.login-screen .entry-form > .field { grid-column: 1 / -1; }
 }
+
+/* In a teacher-only demonstration the live website is the main stage.
+   The complete task list opens separately instead of occupying its width. */
+body:has(.guided-demo) .app-header { flex-basis:48px; min-height:48px; padding:0 16px; }
+.host-screen.guided-demo { max-width:none; display:flex; flex-direction:column; gap:8px; padding:10px 14px; }
+.guided-demo > .demo-stage { display:flex; flex-direction:column; flex:1 1 0; min-width:0; min-height:0; }
+.guided-demo .build-browser { display:flex; flex-wrap:nowrap; flex:0 0 auto; min-height:46px; gap:8px; padding:1px 12px; }
+.guided-demo .build-browser[hidden] { display:none; }
+.guided-demo .build-page-button, .guided-demo .build-follow { min-height:44px; padding:7px 12px; font-size:16px; }
+.guided-demo .contribution-notice { flex:0 0 auto; min-height:46px; gap:4px 10px; padding:7px 14px; font-size:18px; line-height:1.3; }
+.guided-demo .contribution-kind { font-size:14px; padding:3px 7px; }
+.guided-demo #demo-content.demo-controls { flex:0 0 auto; min-width:0; min-height:0; border:1px solid #365065; border-radius:10px; background:#142638; }
+.guided-demo .demo-guide { display:grid; grid-template-columns:minmax(0,1fr) auto auto; grid-template-rows:auto; align-items:center; align-content:center; gap:12px 20px; flex:0 0 auto; min-width:0; min-height:0; padding:10px 14px; }
+.guided-demo .demo-guide > * { grid-column:auto; grid-row:auto; }
+.guided-demo .demo-step-summary { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.guided-demo .demo-step-role { color:var(--mint); font-size:14px; line-height:1.2; font-weight:700; }
+.guided-demo .demo-step-summary > strong { font-size:19px; line-height:1.3; overflow-wrap:anywhere; }
+.guided-demo .demo-completion { color:#b7c7d8; font-size:16px; white-space:nowrap; }
+.guided-demo .demo-toolbar-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.guided-demo .demo-toolbar-actions button { min-height:44px; padding:10px 14px; font-size:16px; }
+.demo-task-shade { padding:12px; }
+.demo-task-modal { width:min(1100px,100%); height:100%; max-height:100%; }
+.demo-task-modal .modal-head { flex:0 0 auto; min-height:52px; padding:4px 14px; }
+.demo-task-modal .modal-head > strong { font-size:20px; }
+.demo-list-body { flex:1 1 0; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; }
+.demo-task-modal .team-tabs { display:grid; flex:0 0 auto; position:static; width:auto; padding:5px; }
+.demo-task-modal .team-tabs button { min-height:44px; font-size:16px; }
+.demo-task-modal #team-content { min-width:0; min-height:0; }
+.demo-task-modal .task-list, .demo-task-modal .people-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:12px; }
+.demo-task-modal .task-row { min-height:74px; padding:10px 12px; }
+.demo-task-modal .task-title { font-size:18px; }
+.demo-task-modal .pager { min-height:48px; padding:2px 12px; font-size:16px; }
+.demo-list-footer { display:flex; justify-content:space-between; align-items:center; gap:14px; flex:0 0 auto; min-height:52px; padding:4px 12px; border-top:1px solid var(--line); }
+.demo-list-footer > span { color:var(--muted); font-size:16px; }
+@media (max-width:950px) {
+  .guided-demo .demo-guide { grid-template-columns:minmax(0,1fr) auto; gap:6px 14px; padding:8px 12px; }
+  .guided-demo .demo-step-summary { grid-column:1; grid-row:1 / 3; }
+  .guided-demo .demo-completion { grid-column:2; grid-row:1; justify-self:end; }
+  .guided-demo .demo-toolbar-actions { grid-column:2; grid-row:2; }
+  .guided-demo .demo-step-summary > strong { font-size:18px; }
+  .guided-demo .demo-toolbar-actions button { padding:8px 10px; }
+}
+@media (max-width:600px) {
+  body:has(.guided-demo) .app-header { padding:0 10px; }
+  .host-screen.guided-demo { gap:6px; padding:6px; }
+  .guided-demo .build-browser { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); min-height:44px; padding:0 3px; gap:2px; }
+  .guided-demo .build-page-button { padding:7px 3px; font-size:14px; }
+  .guided-demo .build-follow { display:none; }
+  .guided-demo .contribution-notice { min-height:40px; padding:6px 9px; gap:3px 7px; font-size:16px; }
+  .guided-demo .contribution-kind { display:none; }
+  .guided-demo .contribution-description { flex-basis:150px; }
+  .guided-demo .demo-guide { grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto auto; gap:6px; padding:8px; }
+  .guided-demo .demo-step-summary { grid-column:1; grid-row:1; }
+  .guided-demo .demo-step-summary > strong { font-size:16px; line-height:1.2; }
+  .guided-demo .demo-step-role { font-size:14px; }
+  .guided-demo .demo-completion { grid-column:2; grid-row:1; align-self:start; font-size:14px; }
+  .guided-demo .demo-toolbar-actions { grid-column:1 / -1; grid-row:2; gap:6px; }
+  .guided-demo .demo-toolbar-actions button { flex:1; min-width:0; padding:8px 6px; font-size:15px; }
+  .demo-task-shade { padding:6px; }
+  .demo-task-modal .modal-head { gap:6px; padding:4px 8px; }
+  .demo-task-modal .modal-head > strong { font-size:18px; }
+  .demo-task-modal .modal-head button { padding:8px; font-size:15px; }
+  .demo-task-modal .task-list, .demo-task-modal .people-list { grid-template-columns:1fr; padding:8px; gap:8px; }
+  .demo-task-modal .task-title { font-size:16px; }
+  .demo-task-modal .task-row { min-height:68px; padding:9px 10px; }
+  .demo-list-footer > span { display:none; }
+  .demo-list-footer { justify-content:flex-end; min-height:48px; padding:2px 8px; }
+}
+@media (max-height:460px) and (orientation:landscape) {
+  body:has(.guided-demo) .app-header { display:none; }
+  .host-screen.guided-demo { gap:5px; padding:5px 8px; }
+  .guided-demo .build-browser { min-height:44px; padding:0 6px; }
+  .guided-demo .build-page-button, .guided-demo .build-follow { font-size:15px; padding:7px 10px; }
+  .guided-demo .contribution-notice { min-height:34px; padding:4px 10px; gap:3px 8px; font-size:16px; }
+  .guided-demo .contribution-kind { display:none; }
+  .guided-demo .demo-guide { grid-template-columns:minmax(0,1fr) auto auto; grid-template-rows:auto; gap:8px; padding:5px 8px; }
+  .guided-demo .demo-guide > * { grid-column:auto; grid-row:auto; }
+  .guided-demo .demo-step-summary { gap:2px; }
+  .guided-demo .demo-step-role { font-size:14px; }
+  .guided-demo .demo-step-summary > strong { font-size:16px; line-height:1.2; }
+  .guided-demo .demo-completion { font-size:14px; align-self:center; }
+  .guided-demo .demo-toolbar-actions { gap:6px; }
+  .guided-demo .demo-toolbar-actions button { min-height:44px; padding:8px; font-size:15px; }
+  .demo-task-shade { padding:5px; }
+  .demo-task-modal .modal-head { min-height:44px; padding:0 10px; }
+  .demo-task-modal .modal-head > strong { font-size:18px; }
+  .demo-task-modal .team-tabs { padding:2px; }
+  .demo-task-modal .task-list, .demo-task-modal .people-list { padding:6px 10px; gap:6px 10px; }
+  .demo-task-modal .task-row { min-height:64px; padding:7px 10px; }
+  .demo-task-modal .task-title { font-size:16px; }
+  .demo-task-modal .pager { min-height:44px; padding:0 10px; }
+  .demo-list-footer { min-height:44px; padding:0 10px; }
+}

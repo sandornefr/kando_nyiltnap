@@ -49,7 +49,9 @@ A Tücsök tanulói oldalán két kezelés (Fürdetés, Teljes kozmetika), nyilv
 
 A foglaló lapozható napokat és választható idősávokat mutat. A foglalt helyek és kutyanevek kitalált minták; Facebook-kommentelő adatát nem használjuk. Az űrlap is kitalált kutyanevet kér. Nem kezel valódi ügyféladatot és nem küld valódi foglalást. Ezt a felület jelzi. A fotók Pexels-stockillusztrációk, nem a szalonban készültek. A képek helyben vannak, forrásuk és felhasználási feltételeik az assets/SOURCES.txt fájlban szerepelnek.
 
-Az átadásnál és lezárás után **A kód mögötte** (bemutatóban **Mi van a gombok mögött?**) megmutatja a csapat választásaiból ténylegesen használt HTML-gombot, CSS-színeket és JavaScript-működést. Innen a **Tanulási út · 9–13.** öt lapos bemutatóhoz vezet; a tanár lapváltását a külön kivetítő is követi, újratöltés után is. Nincs automatikus lapozás.
+Az egyedüli tanári bemutatóban a készülő oldal teljes szélességű főfelületet kap. A következő feladat alul, rövid kezelősávban látható; az **Összes feladat** külön, bezárható és lapozható listát nyit. A lista nem vesz el helyet az élő weboldaltól.
+
+Az átadásnál és lezárás után **A kód mögötte** megmutatja a csapat választásaiból ténylegesen használt HTML-gombot, CSS-színeket és JavaScript-működést. Innen a **Tanulási út · 9–13.** öt lapos bemutatóhoz vezet; a tanár lapváltását a külön kivetítő is követi, újratöltés után is. Nincs automatikus lapozás.
 
 A bemutató játék és bejelentkezés nélkül is megnyitható a **?view=learning** címen, illetve a tanári fejléc **Tanulási út** hivatkozásával. Ez az önálló változat mintabeállításokat használ, és nem módosítja a csoportokat vagy a mentett belépéseket.
 
