@@ -57,7 +57,9 @@ A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja
 
 ## Telefon, iPad és kivetítő
 
-A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. A diák saját feladatait az előző/következő nyíllal lapozza; a számláló mutatja, hol tart és mennyi készült el. Mentés vagy tesztvisszajelzés után a következő elvégezhető feladat jelenik meg, kilenc külön navigációs gomb helyett is görgetés nélkül. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A telefonos rendszerbillentyűzet átmenetileg csökkentheti a hasznos magasságot; az űrlap kitöltése után zárd be.
+A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. A diák saját feladatait az előző/következő nyíllal lapozza; a számláló mutatja, hol tart és mennyi készült el. Mentés vagy tesztvisszajelzés után a következő elvégezhető feladat jelenik meg, kilenc külön navigációs gomb helyett is görgetés nélkül. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A rendszerbillentyűzet megnyitásakor a belépés és a próbaűrlap tömör nézetre vált: az űrlap több helyet kap, a visszalépés és az ellenőrzés egy alsó sorban marad. A képernyő nagyítása önmagában nem kapcsolja be ezt a nézetet.
+
+Célkészülék a 9. generációs iPad, a felhasználó által jelzett iPadOS 27.0.1 rendszerrel. Az elrendezést iPad méretű álló és fekvő böngészőablakban, valamint szimulált billentyűzetmagassággal ellenőrizzük. Ez nem helyettesíti a valódi készüléken, Safariban végzett főpróbát.
 
 A játékos belépése ugyanazon az eszközön és böngészőben lapbezárás után is megmarad, legfeljebb 24 óráig. Újranyitáskor ugyanaz a név, szerep és mentett munka tér vissza. A „Kilépek a csoportból” gomb jelzi a távozást a tanárnak, utána a „Folytatom a játékom” gombbal vissza lehet lépni. Másik csoport kódja nem keveri össze a belépéseket. A tanári jogosultság továbbra is csak az adott böngészőlapon tárolódik.
 
@@ -82,4 +84,4 @@ Python 3.12, `pip install -r requirements.txt`, majd `python server.py`. Alapér
 
 Az API integrációs ellenőrzései: `python -m unittest -v test_backend.py`. Ezek a GitHub Pages közzététele előtt automatikusan is lefutnak, külön ideiglenes adatbázisban. A tesztek nem használják az éles tanári jelszót vagy csoportadatokat.
 
-A böngészős munkamenet és az épülő mintaoldal ellenőrzései: `node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs`. A közzététel ezeket is futtatja.
+A böngészős munkamenet, az épülő mintaoldal és a képernyőméret-kezelés ellenőrzései: `node --test test_player_session.cjs test_app_session.cjs test_site_build.cjs test_viewport.cjs`. A közzététel ezeket is futtatja.

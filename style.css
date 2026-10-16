@@ -1377,3 +1377,40 @@ body:has(.projection) .app-header { flex-basis: 44px; min-height: 44px; padding:
   .lobby-plan { margin-top: 5px; gap: 3px; }
   .lobby-roles { gap: 4px 10px; }
 }
+
+/* Safari keeps the layout viewport tall while its keyboard reduces the
+   visual viewport. Use the measured keyboard state, not height media queries. */
+html.keyboard-open body:has(.player-preview) .app-header,
+html.keyboard-open body:has(.welcome-entry) .app-header { display: none; }
+html.keyboard-open .player-preview {
+  display: grid;
+  grid-template-columns: minmax(100px, .7fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 44px;
+  gap: 6px;
+  padding: 6px;
+}
+html.keyboard-open .player-preview > .site-mount { grid-column: 1 / -1; grid-row: 1; height: 100%; }
+html.keyboard-open .player-preview > .backbar { grid-column: 1; grid-row: 2; display: flex; flex-direction: row; gap: 0; min-width: 0; min-height: 44px; }
+html.keyboard-open .player-preview > .backbar > :not(button) { display: none; }
+html.keyboard-open .player-preview > .backbar > button { min-height: 44px; margin: 0; padding: 8px 10px; font-size: 16px; }
+html.keyboard-open .player-preview > .task-actions { grid-column: 2; grid-row: 2; display: flex; align-items: stretch; justify-content: flex-end; gap: 0; min-width: 0; min-height: 44px; padding: 0; border: 0; }
+html.keyboard-open .player-preview > .task-actions > :not(button) { display: none; }
+html.keyboard-open .player-preview > .task-actions > .button { width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 8px 10px; font-size: 16px; }
+html.keyboard-open .player-preview .ks-local-note { display: none; }
+
+html.keyboard-open .welcome-entry,
+html.keyboard-open .welcome-entry.login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0; padding: 8px; }
+html.keyboard-open .welcome-entry .entry-art { display: none; }
+html.keyboard-open .welcome-entry .entry-form { width: 100%; max-width: 620px; padding: 10px 12px; }
+html.keyboard-open .welcome-entry .entry-form.form-stack { display: flex; flex-direction: column; gap: 6px; }
+html.keyboard-open .welcome-entry .entry-form > :is(.eyebrow, p, .text-link) { display: none; }
+html.keyboard-open .welcome-entry .entry-form h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+html.keyboard-open .welcome-entry .entry-form .field { gap: 3px; font-size: 16px; line-height: 1.2; }
+html.keyboard-open .welcome-entry .entry-form input { min-height: 44px; padding: 8px 10px; font-size: 16px; }
+html.keyboard-open .welcome-entry .entry-form .primary { min-height: 44px; padding: 8px 12px; font-size: 16px; }
+@media (min-width: 600px) {
+  html.keyboard-open .welcome-entry .entry-form.form-stack { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
+  html.keyboard-open .welcome-entry .entry-form h1,
+  html.keyboard-open .welcome-entry .entry-form .primary,
+  html.keyboard-open .welcome-entry.login-screen .entry-form > .field { grid-column: 1 / -1; }
+}
