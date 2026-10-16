@@ -92,6 +92,7 @@ function entry(){
   app.innerHTML=`<section class="screen entry welcome-entry"><div class="entry-art">${welcomeCode()}<p>Tervezés · Fejlesztés · Tesztelés</p></div><form class="entry-form form-stack" id="join-form"><span class="eyebrow">KANDÓ KÓDLABOR</span><h1>Csatlakozz!</h1><label class="field">Játékkód<input id="join-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" value="${esc(code)}" placeholder="123456" required autocomplete="off"></label><label class="field">Beceneved<input id="join-name" maxlength="18" placeholder="Hogyan szólítsunk?" required autocomplete="off"></label><button class="button primary" type="submit">Belépek →</button><p class="muted">A kódot a kivetítőn találod.</p><a class="text-link" href="?view=host">Tanári belépés</a></form></section>`;
 }
 function hostStart(){
+  app.dataset.presentation='false';
   dismissSourceDialog();
   $('#code-modal')?.remove();
   $('#help').hidden=false;
@@ -107,7 +108,8 @@ function showLearningPage(value=0){
   if($('#learning-link')){const link=$('#learning-link');link.hidden=false;link.href='?view=host';link.textContent='Tanári felület';link.removeAttribute('target');}
   app.innerHTML=`<section class="screen learning-standalone">${KandoLearning.render(learningPage,{})}</section>`;
 }
-function renderStart(){clearLiveDrafts();dismissSourceDialog();$('#code-modal')?.remove();structuralKey='';mountedRevision='';if(view==='host')hostStart();else if(view==='learning')showLearningPage();else if(view==='screen')app.innerHTML='<section class="screen waiting-panel"><h1>Nyisd meg a kivetítőt<br>a tanári felületről</h1></section>';else entry();}
+function syncPresentationFrame(){app.dataset.presentation=(view==='screen'||view==='learning'||(view==='host'&&state?.mode==='demo'))?'true':'false';}
+function renderStart(){syncPresentationFrame();clearLiveDrafts();dismissSourceDialog();$('#code-modal')?.remove();structuralKey='';mountedRevision='';if(view==='host')hostStart();else if(view==='learning')showLearningPage();else if(view==='screen')app.innerHTML='<section class="screen waiting-panel"><h1>Nyisd meg a kivetítőt<br>a tanári felületről</h1></section>';else entry();}
 async function create(mode){
   if(state&&state.status!=='closed'&&!confirm('Új csoportot indítasz? A jelenlegi projektet lezárjuk.'))return;
   if(state&&state.status!=='closed')await api('control',{code,token,action:'close'});
@@ -363,6 +365,7 @@ function showTeacherTask(id){
   shade.innerHTML=`<div class="modal-panel"><div class="modal-head"><span>${isDemo()?'Diáknézet · '+esc(t.roleLabel):esc(t.ownerName||'Tanári feladat')}</span>${button('Bezárás ×','close-modal','quiet')}</div>${taskMarkup(t,true)}</div>`;app.append(shade);patchTaskDraft(true);shade.querySelector('button')?.focus();
 }
 function render(){
+  syncPresentationFrame();
   $('#help').hidden=view!=='host';
   if($('#learning-link'))$('#learning-link').hidden=view!=='host';
   if(!state)return renderStart();$('#context').textContent=view==='host'?'Tanári irányítópult':view==='screen'?'Közös projekt':'A fejlesztőcsapat tagja vagy.';

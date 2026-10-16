@@ -65,6 +65,8 @@ A megbízásnál a tanár **Megnézzük a valódi hirdetést** gombbal nyithatja
 
 ## Telefon, iPad és kivetítő
 
+A külön kivetítő, az egyedüli tanári bemutató és a tanulási út számítógépen középre igazított **4:3-as keretet** használ, a képszéleken biztonsági margóval. A fejléc és a bemutatóablakok is a kereten belül maradnak; széles kijelzőn kétoldalt sötét sáv látszik. A kisebb felbontáson az elrendezés tömörebb, a tanulási út lapozói külön helyet kapnak. A diákoldal és a csoportot kezelő tanári irányítópult továbbra is a teljes rendelkezésre álló területet használja.
+
 A teljes munkafelület a rendelkezésre álló képernyőn belül marad. A hosszabb résztvevő- és feladatlista lapozható. A diák saját feladatait az előző/következő nyíllal lapozza; a számláló mutatja, hol tart és mennyi készült el. Mentés vagy tesztvisszajelzés után a következő elvégezhető feladat jelenik meg, kilenc külön navigációs gomb helyett is görgetés nélkül. Keskeny tanári képernyőn a „Közös oldal” és „A csapat” gomb vált a két nézet között. A rendszerbillentyűzet megnyitásakor a belépés és a próbaűrlap tömör nézetre vált: az űrlap több helyet kap, a visszalépés és az ellenőrzés egy alsó sorban marad. A képernyő nagyítása önmagában nem kapcsolja be ezt a nézetet.
 
 Célkészülék a 9. generációs iPad, a felhasználó által jelzett iPadOS 27.0.1 rendszerrel. Az elrendezést iPad méretű álló és fekvő böngészőablakban, valamint szimulált billentyűzetmagassággal ellenőrizzük. Ez nem helyettesíti a valódi készüléken, Safariban végzett főpróbát.

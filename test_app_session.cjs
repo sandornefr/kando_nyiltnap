@@ -119,6 +119,38 @@ async function settle() {
   for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve));
 }
 
+test('projection framing covers the empty screen, its lobby and the standalone learning route', () => {
+  const screen = boot({search:'?view=screen'});
+  assert.match(screen.html(), /Nyisd meg a kivetítőt/);
+  assert.equal(screen.run('app.dataset.presentation'), 'true', 'The waiting screen is projected before a room exists');
+  screen.run(`state=${JSON.stringify(playerState())};render();`);
+  assert.match(screen.html(), /lobby-screen/);
+  assert.equal(screen.run('app.dataset.presentation'), 'true', 'The lobby must retain the same safe projector frame');
+
+  const learning = boot({search:'?view=learning'});
+  assert.equal(learning.run('app.dataset.presentation'), 'true');
+  learning.clickData('learning-page','4');
+  assert.equal(learning.run('app.dataset.presentation'), 'true', 'Changing a teaching slide must not resize the outer frame');
+});
+
+test('the teacher demo frame never leaks into group management, player screens or the start page', () => {
+  const app = boot({search:'?view=host'});
+  assert.equal(app.run('app.dataset.presentation'), 'false', 'Teacher login remains a normal responsive page');
+  app.run(`state=${JSON.stringify(playerState({mode:'demo'}))};render();`);
+  assert.equal(app.run('app.dataset.presentation'), 'true');
+  app.run('hostStart();');
+  assert.equal(app.run('app.dataset.presentation'), 'false', 'Leaving a demo restores the ordinary teacher start page');
+
+  app.run("state.mode='group';render();");
+  assert.equal(app.run('app.dataset.presentation'), 'false', 'Managing a live group must keep the full control layout');
+  app.run("view='player';state.mode='demo';render();");
+  assert.equal(app.run('app.dataset.presentation'), 'false', 'A demo room alone must not constrain a participant screen');
+  assert.match(app.html(), /Benne vagy a csapatban/);
+  app.run("view='join';state=null;renderStart();");
+  assert.equal(app.run('app.dataset.presentation'), 'false');
+  assert.match(app.html(), /id="join-form"/);
+});
+
 test('the standalone learning route leaves saved games alone and needs no server or login', async () => {
   const session = storage({'kando-nyiltnap-host': JSON.stringify({code:'654321',token:'private-host-token'})});
   const local = savedLocal();

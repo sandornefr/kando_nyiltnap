@@ -1507,3 +1507,70 @@ body:has(.guided-demo) .app-header { flex-basis:48px; min-height:48px; padding:0
   .demo-task-modal .pager { min-height:44px; padding:0 10px; }
   .demo-list-footer { min-height:44px; padding:0 10px; }
 }
+
+/* Projector-safe 4:3 canvas. Reflow at real dimensions; never stretch or crop.
+   Small phones keep their normal layout, and student/ordinary host views are untouched. */
+@media (min-width:700px) and (min-height:500px) {
+  html:has(#app[data-presentation="true"], body > #code-modal) { background:#050b14; }
+  body:has(#app[data-presentation="true"]), body:has(> #code-modal) {
+    --presentation-safe:clamp(16px,3vmin,40px);
+    --header-height:44px;
+    --presentation-width:min(calc(100vw - var(--presentation-safe) * 2),calc((var(--visible-height,100dvh) - var(--presentation-safe) * 2) * 4 / 3));
+    --presentation-height:min(calc(var(--visible-height,100dvh) - var(--presentation-safe) * 2),calc((100vw - var(--presentation-safe) * 2) * 3 / 4));
+    position:absolute; left:50%; top:calc(var(--visible-height,100dvh) / 2);
+    width:var(--presentation-width); height:var(--presentation-height);
+    margin:0; transform:translate(-50%,-50%); container:presentation / size;
+    box-shadow:0 0 0 1px #26384b;
+  }
+  body:has(#app[data-presentation="true"]) .app-header,
+  body:has(> #code-modal) .app-header { flex-basis:44px; min-height:44px; padding:0 14px; gap:16px; }
+  body:has(#app[data-presentation="true"]) #notice,
+  body:has(> #code-modal) #notice { position:absolute; max-width:calc(100% - 28px); bottom:12px; }
+  body:has(#app[data-presentation="true"]) #connection,
+  body:has(> #code-modal) #connection { position:absolute; }
+  @container presentation (max-width:1100px) {
+    .header-context { display:none; }
+    .host-screen.projection, .host-screen.guided-demo { padding:8px; gap:8px; }
+    .projection .session-top { min-height:36px; gap:12px; }
+    .projection .session-top h1 { font-size:24px; }
+    .projection .contribution-notice { min-height:58px; padding:8px 14px; gap:4px 12px; font-size:21px; }
+    .projection .contribution-description { flex-basis:250px; }
+    .projection .build-browser { min-height:44px; padding:0 8px; }
+    .projection .build-page-button, .projection .build-follow { font-size:16px; }
+    .guided-demo .demo-guide { grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:7px 10px; }
+    .guided-demo .demo-step-summary { grid-column:1; grid-row:1 / 3; }
+    .guided-demo .demo-completion { grid-column:2; grid-row:1; justify-self:end; }
+    .guided-demo .demo-toolbar-actions { grid-column:2; grid-row:2; }
+    .guided-demo .demo-step-summary > strong { font-size:17px; }
+    .guided-demo .demo-toolbar-actions button { padding:8px 10px; }
+    .commission-brief, .projection .commission-brief { padding:18px; gap:14px 24px; }
+    .commission-brief h2, .projection .commission-brief h2 { font-size:32px; }
+    .commission-brief .brief-requirement, .projection .brief-requirement { font-size:18px; padding:10px 0; }
+    .lobby-screen { padding:16px; gap:12px; }
+    .lobby-screen .session-top h1 { font-size:28px; }
+    .lobby-screen .lobby-layout { grid-template-columns:minmax(0,1fr) minmax(0,.8fr); gap:14px; }
+    .lobby-screen .brief-pane { padding:18px; gap:12px; }
+    .lobby-screen .join-code { font-size:64px; }
+    .modal-shade { padding:10px; }
+    .task-workbench { gap:12px; }
+  }
+  @container presentation (max-height:600px) {
+    .host-screen.projection, .host-screen.guided-demo { padding:6px; gap:6px; }
+    .projection .session-top h1 { font-size:22px; }
+    .projection .contribution-notice, .guided-demo .contribution-notice { min-height:40px; padding:5px 10px; font-size:17px; }
+    .projection .contribution-kind { font-size:14px; padding:3px 6px; }
+    .commission-brief, .projection .commission-brief { padding:14px; gap:10px 20px; }
+    .commission-brief h2, .projection .commission-brief h2 { font-size:28px; }
+    .commission-brief .brief-requirement, .projection .brief-requirement { padding:6px 0; font-size:17px; }
+    .commission-heading .eyebrow { display:none; }
+    .demo-task-modal .modal-head { min-height:44px; padding:0 10px; }
+    .demo-task-modal .team-tabs { padding:2px; }
+    .demo-list-footer { min-height:44px; padding:0 10px; }
+    .lobby-screen { padding:10px; gap:8px; }
+    .lobby-screen .session-top h1 { font-size:24px; }
+    .lobby-screen .brief-pane { padding:14px; gap:8px; }
+    .lobby-screen .join-code { font-size:50px; }
+    .lobby-screen .brief-pane h2 { font-size:23px; }
+    .lobby-screen .brief-pane > p { display:none; }
+  }
+}
